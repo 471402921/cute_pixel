@@ -120,12 +120,14 @@ features/{module}/
 
 ## 像素引擎与底座
 
-像素渲染由 Godot 4 承担,通过 [react-native-godot](https://github.com/borndotcom/react-native-godot) 嵌入 RN(详见 [ADR-002](decisions/ADR-002-godot-as-pixel-engine-via-react-native-godot.md))。
+像素渲染由 Godot 4.5.x 承担,通过 [react-native-godot](https://github.com/borndotcom/react-native-godot) 嵌入 RN(详见 [ADR-002](decisions/ADR-002-godot-as-pixel-engine-via-react-native-godot.md))。
 
-架构层面 RN ↔ Godot 边界:
+架构层面 RN ↔ Godot 边界(B1 验证后定型):
 
 - 所有 Godot 桥接通过 `services/godot/` **单点封装**,业务模块**不**直接 import `react-native-godot`
-- `features/` 内部需要嵌入像素场景时,使用 `services/godot/` 暴露的 `<PixelView>` 组件 + `godotApi`
+- **唯一 Godot 引擎实例**由 `services/godot/GodotProvider` 在 app 启动时创建,挂在 `NavigationContainer` 同级或更上层,生命周期 = app 生命周期(永不 `destroyInstance` during normal navigation)
+- `features/` 内部需要嵌入像素场景时,使用 `services/godot/` 暴露的 `<PixelView scene="..." />`,这是个 **portal placeholder**——`onLayout` 上报 frame 给 GodotProvider,Provider 把 RTNGodotView 移到此位置 + 调 `godotApi.loadScene(name)`
+- **所有 RN → Godot API 调用必须在 worklet 里**(`runOnGodotThread(() => { "worklet"; ... })`),详见 [conventions §13](conventions.md#13-worklet-契约)
 - RN ↔ Godot 通信契约、Asset 管线、灯光约定、业务实体在像素世界中表现等,详见 [pixel-foundation.md](pixel-foundation.md)
 
 ## 与后端的契约

@@ -1,6 +1,6 @@
 # Conventions
 
-12 条编码标准。前 7 条是 P0(底线),后 5 条是 P1(约定)。
+14 条编码标准。§1-7 是 P0(底线),§8-12 是 P1(约定),§13-14 是 P0 集成补充(B1 验证后追加)。
 
 ---
 
@@ -139,3 +139,94 @@ HTTP 异常 / zod parse 失败  →  services/network 拦截器  →  Failure(se
 - **存档版本号**:每个 store 的 `persist` 配置带 `version` + `migrate(persistedState, version)`
 - MMKV 作为存储后端(`react-native-mmkv` + zustand persist adapter)
 - 存档失败兜底:记日志 + 使用 store 默认值,不阻塞用户(避免"加载失败"白屏)
+
+---
+
+## P0(集成补充,B1 验证后追加)
+
+### 13. Worklet 契约
+
+**所有 RN → Godot API 调用必须在 worklet 里**——`react-native-worklets-core` 提供的 `runOnGodotThread(() => { "worklet"; ... })`。
+
+```typescript
+import { runOnGodotThread } from 'react-native-worklets-core';
+import { godotApi } from '@/services/godot/godotApi';
+
+// ✅ 正确
+function feedPet(petId: string, foodType: string) {
+  runOnGodotThread(() => {
+    "worklet";  // ← 必须的 directive
+    godotApi.sendEntityState(petId, { eating: foodType });
+  });
+}
+
+// ❌ 错误:直接在 React 渲染期 / setState 回调 / 主 JS 线程调
+const PetPage = () => {
+  const pet = usePetStore((s) => s.pet);
+  godotApi.sendEntityState(pet.id, { ... });  // 报错或行为不可预测
+  return <PixelView scene="pet_world" />;
+};
+```
+
+**Why**:`react-native-worklets-core` 把函数序列化到 Godot 线程上执行。直接在主 JS 线程调 `godotApi.*` 会落到"background 线程"概念,无法完整访问 Scene Tree;且对象引用不能跨 JS 上下文传递,会引发悄无声息的 bug 或崩溃(详见 [react-native-godot README §Threading](https://github.com/borndotcom/react-native-godot#threading-and-javascript-in-react-native) + [_B1_REPORT.md §7b](_B1_REPORT.md))。
+
+**Lint 强制(planned)**:工程骨架预设 custom Biome / eslint plugin,识别非 worklet 上下文调 `godotApi.*` / `RTNGodot.*` → error。在 plugin 落地前由 review skill 人工检查。
+
+### 14. Godot env + Native Build Patches
+
+#### 14a. `GODOT_EDITOR` env 必须指向 4.5.x
+
+```bash
+# ~/.zshrc 或 .envrc
+export GODOT_EDITOR=/Applications/Godot-4.5.app/Contents/MacOS/Godot
+```
+
+不能用工程脚本默认的 `/Applications/Godot.app`(那个可能是 4.6+,导出后 LibGodot 4.5.1 runtime 在 `try_open_pack()` 硬性 abort)。详见 [ADR-002 §版本钉死](decisions/ADR-002-godot-as-pixel-engine-via-react-native-godot.md#版本钉死b1-验证后定的硬约束)。
+
+工程脚本(`scripts/export_godot_*.sh`)启动时 sanity check:
+
+```sh
+"$GODOT_EDITOR" --version 2>&1 | grep -q '^4\.5\.' || {
+  echo "ERROR: GODOT_EDITOR must point to a Godot 4.5.x install" >&2
+  exit 1
+}
+```
+
+#### 14b. iOS Podfile 必须带 fmt base.h patch
+
+RN 0.81 + Xcode 26.4 stack 下 `Pods/fmt/include/fmt/base.h` 的 `__apple_build_version__` 守卫拒绝 Apple Clang 21,xcodebuild 会挂在 `consteval` constant expression 错误。**`xcconfig` 走 `FMT_USE_CONSTEVAL=0` 无效**(fmt 内部 if/elif 链不 guard 外部 define),必须改源码。
+
+`ios/Podfile` 的 `post_install` 钩子:
+
+```ruby
+post_install do |installer|
+  react_native_post_install(installer, ...)
+
+  # TODO: remove when RN ≥ 0.84(fmt 升 12.1 后修复)
+  base_h = File.join(installer.sandbox.root, 'fmt', 'include', 'fmt', 'base.h')
+  if File.exist?(base_h)
+    contents = File.read(base_h)
+    patched = contents.sub(
+      '#elif defined(__apple_build_version__) && __apple_build_version__ < 14000029L',
+      '#elif defined(__apple_build_version__)'
+    )
+    unless contents == patched
+      File.chmod(0o644, base_h)   # podspec 默认 0444
+      File.write(base_h, patched)
+    end
+  end
+end
+```
+
+详见 [_B1_REPORT.md §3b](_B1_REPORT.md) + [facebook/react-native#55601](https://github.com/facebook/react-native/issues/55601)。
+
+#### 14c. Android NDK + 镜像准备
+
+- AVD **必须** arm64-v8a(react-native-godot LibGodot Android binding 只发 arm64)
+- 首次 build 自动装 NDK 27.0.12077973 + 28.1.13356709,共 ~3GB,留够磁盘
+- 国内开发机:`gradle.properties` / `~/.gradle/init.d/` 提前配阿里云 maven 镜像,避免 dl.google.com TLS 抖动时 build 整体崩(详见 [_B1_REPORT.md §4](_B1_REPORT.md))
+
+#### 14d. iOS Ruby + Bundler
+
+- macOS 系统 Ruby 2.6.10 + `gem install --user-install bundler -v 2.4.1` 即可(不需 rbenv/asdf)
+- 项目内 `bundle config set --local path 'vendor/bundle'` 把 cocoapods 装到项目目录,不污染系统(详见 [_B1_REPORT.md §3a](_B1_REPORT.md))

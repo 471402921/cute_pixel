@@ -6,21 +6,22 @@
 
 | 文件 | 用途 | Status |
 |---|---|---|
-| `architecture.md` | 模块边界 / 依赖规则 / 目录结构 | Outline |
-| `conventions.md` | 编码标准 / 错误 / i18n / 测试 / lint | Outline |
-| `pixel-foundation.md` | RN ↔ Godot 嵌入范式 / 灯光 / 业务实体在像素世界 | Outline |
-| `decisions/` | ADR(架构决策记录) | 部分 Decided,其余 Draft |
+| `architecture.md` | 模块边界 / 依赖规则 / 目录结构 | Decided(B1 验证后版本对齐) |
+| `conventions.md` | 编码标准 / 错误 / i18n / 测试 / lint / worklet / native build patches | Decided(B1 验证后追加 §13-14) |
+| `pixel-foundation.md` | RN ↔ Godot 嵌入范式 / GodotProvider + PixelView Portal / 灯光 / 业务实体 | Decided(B1 验证后大改) |
+| `decisions/` | ADR(架构决策记录) | 全部 Accepted |
+| `_B1_REPORT.md` | B1 集成验证报告(react-native-godot example 跑通过程 + 决策影响) | Final(2026-05-11) |
 
 ## ADR 状态速查
 
-| ADR | 主题 | Status |
-|---|---|---|
-| ADR-001 | React Native as App Framework | Accepted |
-| ADR-002 | Godot as Pixel Engine via react-native-godot | Accepted |
-| ADR-003 | State Management: Zustand | Draft(Day 0 已拍,正文待填) |
-| ADR-004 | RN Bare Workflow & 工具链 | Draft |
-| ADR-005 | Godot 编辑器作为 Asset 编排工具 | Draft |
-| ADR-006 | Spec-driven 流水线与强门禁 | Draft |
+| ADR | 主题 | Status | 备注 |
+|---|---|---|---|
+| ADR-001 | React Native as App Framework | Accepted | 2026-05-11 修订(版本 pin + Expo modules 范围) |
+| ADR-002 | Godot as Pixel Engine via react-native-godot | Accepted | 2026-05-11 修订(Godot 4.5.x pin + Engine 生命周期 + PixelView Portal) |
+| ADR-003 | State Management: Zustand | Accepted | |
+| ADR-004 | RN Bare workflow + Expo modules,配套工具链 | Accepted | 2026-05-11 修订(yarn 4 / Expo modules / 版本锁全套) |
+| ADR-005 | Godot 编辑器作为 Asset 编排工具 | Accepted | |
+| ADR-006 | Spec-driven 流水线与强门禁 | Accepted | |
 
 ## 写作纪律
 
