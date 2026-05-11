@@ -3,7 +3,13 @@
     "allow": [
       "Bash(git --version)",
       "Bash(gh --version)",
-      "Bash(git reset *)"
+      "Bash(git reset *)",
+      "Bash(brew config *)",
+      "Bash(brew --prefix openjdk@21)",
+      "Bash(watchman --version)",
+      "Bash(pod --version)",
+      "Bash(godot --version --headless)",
+      "WebFetch(domain:docs.godotengine.org)"
     ]
   }
 }
