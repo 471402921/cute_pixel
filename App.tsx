@@ -171,17 +171,10 @@ const App = () => {
       <View style={styles.container}>
         <View style={styles.buttonContainer}>
           <Button
-            title="Start 1"
+            title="Start"
             onPress={() => {
               console.log("Starting Godot...");
               initGodot("GodotTest");
-            }}
-          />
-          <Button
-            title="Start 2"
-            onPress={() => {
-              console.log("Starting Godot...");
-              initGodot("GodotTest2");
             }}
           />
           <Button
