@@ -4,11 +4,12 @@
 
 ## 状态
 
-**规划期**(2026-05)。文档已 Decided,工程骨架待 fork [react-native-godot example](https://github.com/borndotcom/react-native-godot/tree/main/example) 起步。
+**B2 基础设施已就绪**(2026-05)。Upstream `react-native-godot/example` 已平移为 working baseline,清理死代码后重组成 `app/` + `godot_project/` + `scripts/`,Biome 替换 ESLint+Prettier。三平台都能跑(iOS Sim + Android Emulator + Android 真机)。
 
-- ✅ Phase A:开发环境搭建(Node 22 LTS / Xcode 26 / Android SDK / Godot 4.5 / pnpm / yarn 4 / Biome)
-- ✅ B1:react-native-godot example 三平台跑通(iOS Sim + Android Emulator + Android 真机),双向 signal 可用 — 详见 [_B1_REPORT.md](doc/cute_pixel_plan/_B1_REPORT.md)
-- ⏳ B2-H:工程骨架 / services 落地 / app shell / godot_project / skill 套件 / 第一个 demo 模块
+- ✅ Phase A:开发环境搭建(Node 22 LTS / Xcode 26 / Android SDK / Godot 4.5 / yarn 4 / Biome)
+- ✅ B1:react-native-godot example 三平台跑通,双向 signal 可用 — 详见 [_B1_REPORT.md](doc/cute_pixel_plan/_B1_REPORT.md)
+- ✅ B2(基础设施):baseline 平移 + 死代码清理 + `app/`/`godot_project/`/`scripts/` 重组 + Biome
+- ⏳ B2(继续):Module-First Flat 真正落地(`app/services/godot/` 等) + 6 个 `cute-pixel-*` skill + 第一个 demo 模块
 
 ## 核心选型(Day-0 + B1 后定型)
 

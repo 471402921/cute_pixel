@@ -4,15 +4,16 @@
 
 ## 仓库状态
 
-本仓库**只有规划文档 + B1 集成报告**,没有 app 代码、没有 `godot_project/`、没有 `package.json`。架构文档里描述的 `app/`、`android/`、`ios/`、`godot_project/`、`e2e/` 都还是 `planned` 状态,尚未脚手架。
+工程骨架已搭(`app/` / `godot_project/` / `scripts/` / Biome / yarn 4),iOS Sim + Android Emulator + Android 真机三平台都跑通过。架构文档里的 `app/services/godot/` `app/shared/` `app/features/` `app/_template/` `app/navigation/` `app/theme/` `app/i18n/` `e2e/` 等仍是 `planned`,等真正 Module-First Flat 落地。
 
 进度:
 
 - ✅ Phase A:开发环境就绪(Node 22 LTS / Xcode 26 / Android SDK + AVD / Godot 4.5 / yarn 4 / Biome 等)
 - ✅ B1:react-native-godot example 三平台跑通(详见 [_B1_REPORT.md](doc/cute_pixel_plan/_B1_REPORT.md));ADR-001/002/004 + conventions + pixel-foundation 已据 B1 发现 2026-05-11 修订
-- ⏳ B2 起:工程骨架 / services 落地 / app shell / godot_project / 6 个 `cute-pixel-*` skill / 第一个 demo 模块
+- ✅ B2(基础设施):upstream example 平移为 working baseline,清理死代码,重组成 `app/` + `godot_project/` + `scripts/`,Biome 替换 ESLint+Prettier
+- ⏳ B2(继续):Module-First Flat 真正落地(`app/services/godot/` `app/shared/` `app/features/` 等) + 6 个 `cute-pixel-*` skill + 第一个 demo 模块
 
-正在迭代的内容在 [doc/cute_pixel_plan/](doc/cute_pixel_plan/)。等 B2-H 全套稳定后整体复制到 `doc/`,本目录归档为快照。
+正在迭代的内容在 [doc/cute_pixel_plan/](doc/cute_pixel_plan/)。等 B2 全套稳定后整体复制到 `doc/`,本目录归档为快照。
 
 ## 项目定位
 
@@ -189,11 +190,14 @@ ADR 编号从 001 起,不 supersede 任何外部 ADR。
 
 ## 构建 / Lint / 测试命令
 
-工程骨架(yarn / Biome / Jest / Detox)还没落地,所以本仓库当前没有可执行命令。等 B2 落地后,按 ADR-004 / conventions §6 的契约会是:
+工程骨架已就绪(B2 part 1 完成),可用命令(详见 `package.json` scripts):
 
-- `yarn check` — typecheck + Biome lint(commit 前必须 0 issue)
-- `yarn test` / `yarn test --coverage` — Jest unit + store + component 三层
-- `yarn ios` / `yarn android` — 运行模拟器/真机
-- Detox:PR 跑冒烟,主线 nightly 跑全量
+- `yarn check` — `biome check . && tsc --noEmit`,commit 前必须 0 error(目前 App.tsx 有 7 个 typecheck error + Biome 14 warnings,都是 upstream 遗留的 `any` / 未使用参数,待 TS strict refactor 时清)
+- `yarn lint` — `biome check .`(只 lint,不 typecheck)
+- `yarn lint:fix` — `biome check --write .`(自动 fix 能 fix 的)
+- `yarn format` — `biome format --write .`
+- `yarn test` — Jest(目前只有 `app/__tests__/App.test.tsx` 一个 smoke test)
+- `yarn ios` / `yarn android` — 跑 iOS Sim / Android emulator/真机
+- `yarn start` — Metro bundler
 
-在那之前,本仓库当作纯文档仓库处理。
+Detox e2e 还没接(planned)。Husky + lint-staged commit gate 还没接(planned)。
