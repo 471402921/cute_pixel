@@ -6,20 +6,13 @@
  */
 
 import "setimmediate"; // Required by New Architecture
-import React from "react";
-import { useEffect } from "react";
-import {
-  RTNGodot,
-  RTNGodotView,
-  runOnGodotThread,
-} from "@borndotcom/react-native-godot";
-import * as FileSystem from "expo-file-system/legacy";
-import { Button, StyleSheet, View, Platform } from "react-native";
-
+import { RTNGodot, RTNGodotView, runOnGodotThread } from "@borndotcom/react-native-godot";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-
 import * as Device from "expo-device";
+import * as FileSystem from "expo-file-system/legacy";
+import React, { useEffect } from "react";
+import { Button, Platform, StyleSheet, View } from "react-native";
 
 const Stack = createNativeStackNavigator();
 
@@ -51,7 +44,7 @@ function initGodot(name) {
         "embedded",
       ]);
     } else {
-      let args = [
+      const args = [
         // Uncomment and fill in the correct IP address and port for debugging in the Godot Editor.
         // Check the documentation for the complete procedure.
         // "--remote-debug",
@@ -64,25 +57,15 @@ function initGodot(name) {
       ];
 
       if (Device.isDevice) {
-        args.push(
-          "--rendering-driver",
-          "opengl3",
-          "--rendering-method",
-          "gl_compatibility"
-        );
+        args.push("--rendering-driver", "opengl3", "--rendering-method", "gl_compatibility");
       } else {
-        args.push(
-          "--rendering-driver",
-          "metal",
-          "--rendering-method",
-          "mobile"
-        );
+        args.push("--rendering-driver", "metal", "--rendering-method", "mobile");
       }
 
       RTNGodot.createInstance(args);
     }
 
-    let Godot = RTNGodot.API();
+    const Godot = RTNGodot.API();
     var v = Godot.Vector2();
     v.x = 1.0;
     v.y = 2.0;
@@ -130,16 +113,12 @@ const appController = () => {
   const engine = Godot.Engine;
   const sceneTree = engine.get_main_loop();
   const root = sceneTree.get_root();
-  const controller = root.find_child(
-    "AppController",
-    true,
-    false
-  ) as AppController;
+  const controller = root.find_child("AppController", true, false) as AppController;
 
   if (!controller) return null;
 
   if (!controller.has_connections("window_status_update")) {
-    controller.window_status_update.connect(function (message: string) {
+    controller.window_status_update.connect((message: string) => {
       console.log(message);
     });
   }
@@ -148,19 +127,19 @@ const appController = () => {
 };
 
 const App = () => {
-  const openSubwindow = function () {
+  const openSubwindow = () => {
     runOnGodotThread(() => {
       "worklet";
-      let controller = appController();
+      const controller = appController();
       if (!controller) return;
       controller.open_window("subwindow");
     });
   };
 
-  const closeSubwindow = function () {
+  const closeSubwindow = () => {
     runOnGodotThread(() => {
       "worklet";
-      let controller = appController();
+      const controller = appController();
       if (!controller) return;
       controller.close_window("subwindow");
     });

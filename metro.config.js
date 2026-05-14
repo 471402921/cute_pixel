@@ -16,7 +16,7 @@ function escapeRegExp(pattern) {
   } else if (typeof pattern === "string") {
     // Make sure all the special characters used by regular expression are properly
     // escaped. The string inputs are supposed to match as is.
-    var escaped = pattern.replace(/[\-\[\]\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
+    const escaped = pattern.replace(/[-[\]{}()*+?.\\^$|]/g, "\\$&");
     // convert the '/' into an escaped local file separator. The separator needs
     // to be escaped in the regular expression source string, hence the '\\' prefix.
     return escaped.replaceAll("/", "\\" + path.sep);
@@ -27,9 +27,7 @@ function escapeRegExp(pattern) {
 
 function exclusionList(additionalExclusions) {
   return new RegExp(
-    "(" +
-      (additionalExclusions || []).concat(list).map(escapeRegExp).join("|") +
-      ")$"
+    "(" + (additionalExclusions || []).concat(list).map(escapeRegExp).join("|") + ")$",
   );
 }
 
@@ -54,9 +52,7 @@ const config = {
     // Exclude the parent folder's node_modules from being processed by Metro
     blockList: exclusionList([
       // This regex matches any path that contains "/../node_modules/" (or Windows equivalent)
-      new RegExp(
-        `${path.resolve(__dirname, "..")}${path.sep}node_modules${path.sep}.*`
-      ),
+      new RegExp(`${path.resolve(__dirname, "..")}${path.sep}node_modules${path.sep}.*`),
     ]),
     unstable_enableSymlinks: true,
   },
