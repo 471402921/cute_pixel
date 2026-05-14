@@ -1578,9 +1578,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@borndotcom/react-native-godot@portal:../::locator=GodotTest%40workspace%3A.":
-  version: 0.0.0-use.local
-  resolution: "@borndotcom/react-native-godot@portal:../::locator=GodotTest%40workspace%3A."
+"@borndotcom/react-native-godot@npm:1.0.1":
+  version: 1.0.1
+  resolution: "@borndotcom/react-native-godot@npm:1.0.1"
   dependencies:
     react-native-worklets-core: "npm:1.6.2"
   peerDependencies:
@@ -1588,9 +1588,10 @@ __metadata:
     react-native: "*"
     react-native-worklets-core: "*"
   bin:
-    download-prebuilt: ./scripts/download-prebuilt.js
+    download-prebuilt: scripts/download-prebuilt.js
+  checksum: 10c0/9c2ac6d0558e2e5d78d12787ea33e7ce60352da78138273a7a74d40d076a8993c2ba46c1be2ad6af5463839f3e84eb72df32cf1dbbb556e6985166e49f87dbf6
   languageName: node
-  linkType: soft
+  linkType: hard
 
 "@eslint-community/eslint-utils@npm:^4.2.0, @eslint-community/eslint-utils@npm:^4.7.0":
   version: 4.9.0
@@ -3443,7 +3444,7 @@ __metadata:
     "@babel/plugin-proposal-optional-chaining": "npm:~7.21.0"
     "@babel/preset-env": "npm:^7.25.3"
     "@babel/runtime": "npm:^7.25.0"
-    "@borndotcom/react-native-godot": "portal:../"
+    "@borndotcom/react-native-godot": "npm:1.0.1"
     "@react-native-community/cli": "npm:^20.0.0"
     "@react-native-community/cli-platform-android": "npm:^20.0.0"
     "@react-native-community/cli-platform-ios": "npm:^20.0.0"
