@@ -201,7 +201,7 @@ ADR 编号从 001 起,不 supersede 任何外部 ADR。
 
 工程骨架已就绪(B2 part 1 完成),可用命令(详见 `package.json` scripts):
 
-- `yarn check` — `biome check . && tsc --noEmit`,commit 前必须 0 error(目前 App.tsx 有 7 个 typecheck error + Biome 14 warnings,都是 upstream 遗留的 `any` / 未使用参数,待 TS strict refactor 时清)
+- `yarn check` — `biome check . && tsc --noEmit`,commit 前必须 0 error(已清掉 upstream 遗留的 7 个 typecheck error + 7 个 Biome warning,详见 commit 0fec3e5;`@borndotcom/react-native-godot` 的最小 .d.ts 在 `app/types/`)
 - `yarn lint` — `biome check .`(只 lint,不 typecheck)
 - `yarn lint:fix` — `biome check --write .`(自动 fix 能 fix 的)
 - `yarn format` — `biome format --write .`
