@@ -6,17 +6,31 @@
  */
 
 import "setimmediate"; // Required by New Architecture
-import { RTNGodot, RTNGodotView, runOnGodotThread } from "@borndotcom/react-native-godot";
+import {
+  type GodotNode,
+  type GodotSignal,
+  RTNGodot,
+  RTNGodotView,
+  runOnGodotThread,
+} from "@borndotcom/react-native-godot";
 import { NavigationContainer } from "@react-navigation/native";
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import {
+  createNativeStackNavigator,
+  type NativeStackScreenProps,
+} from "@react-navigation/native-stack";
 import * as Device from "expo-device";
 import * as FileSystem from "expo-file-system/legacy";
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { Button, Platform, StyleSheet, View } from "react-native";
 
-const Stack = createNativeStackNavigator();
+type RootStackParamList = {
+  MainWindow: undefined;
+  SubWindow: undefined;
+};
 
-function initGodot(name) {
+const Stack = createNativeStackNavigator<RootStackParamList>();
+
+function initGodot(name: string) {
   if (RTNGodot.getInstance() != null) {
     console.log("Godot was already initialized.");
     return;
@@ -35,7 +49,7 @@ function initGodot(name) {
         // "tcp://IP_ADDRESS:6007",
         "--verbose",
         "--path",
-        "/" + name,
+        `/${name}`,
         "--rendering-driver",
         "opengl3",
         "--rendering-method",
@@ -51,7 +65,7 @@ function initGodot(name) {
         // "tcp://IP_ADDRESS:6007",
         "--verbose",
         "--main-pack",
-        FileSystem.bundleDirectory + name + ".pck",
+        `${FileSystem.bundleDirectory}${name}.pck`,
         "--display-driver",
         "embedded",
       ];
@@ -66,24 +80,24 @@ function initGodot(name) {
     }
 
     const Godot = RTNGodot.API();
-    var v = Godot.Vector2();
+    const v = Godot.Vector2();
     v.x = 1.0;
     v.y = 2.0;
-    console.log("Godot Engine initialized:" + v.x + "," + v.y);
-    var engine = Godot.Engine;
+    console.log(`Godot Engine initialized:${v.x},${v.y}`);
+    const engine = Godot.Engine;
     console.log("After Engine");
-    var sceneTree = engine.get_main_loop();
+    const sceneTree = engine.get_main_loop();
     console.log("After Main Loop");
-    var root = sceneTree.get_root();
+    sceneTree.get_root();
     console.log("After Get Root");
   });
 }
 
-function pauseGodot(ev: any) {
+function pauseGodot() {
   RTNGodot.pause();
 }
 
-function resumeGodot(ev: any) {
+function resumeGodot() {
   RTNGodot.resume();
 }
 
@@ -94,9 +108,10 @@ function destroyGodot() {
   });
 }
 
-export interface AppController {
+export interface AppController extends GodotNode {
   open_window(windowName: string): void;
   close_window(windowName: string): void;
+  window_status_update: GodotSignal<[string]>;
 }
 
 const instance = () => {
@@ -105,7 +120,7 @@ const instance = () => {
   return RTNGodot.getInstance();
 };
 
-const appController = () => {
+const appController = (): AppController | null => {
   "worklet";
   if (!instance()) return null;
 
@@ -113,7 +128,7 @@ const appController = () => {
   const engine = Godot.Engine;
   const sceneTree = engine.get_main_loop();
   const root = sceneTree.get_root();
-  const controller = root.find_child("AppController", true, false) as AppController;
+  const controller = root.find_child("AppController", true, false) as AppController | null;
 
   if (!controller) return null;
 
@@ -145,7 +160,7 @@ const App = () => {
     });
   };
 
-  const MainWindow = ({ navigation }) => {
+  const MainWindow = ({ navigation }: NativeStackScreenProps<RootStackParamList, "MainWindow">) => {
     return (
       <View style={styles.container}>
         <View style={styles.buttonContainer}>
@@ -167,7 +182,7 @@ const App = () => {
           <Button
             title="Open Window"
             onPress={() => {
-              navigation.navigate("SubWindow", {});
+              navigation.navigate("SubWindow");
             }}
           />
         </View>
@@ -178,7 +193,7 @@ const App = () => {
     );
   };
 
-  const SubWindow = ({ navigation, route }) => {
+  const SubWindow = ({ navigation }: NativeStackScreenProps<RootStackParamList, "SubWindow">) => {
     useEffect(() => {
       openSubwindow();
       return () => {
