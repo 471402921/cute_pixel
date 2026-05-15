@@ -1,284 +1,42 @@
 /**
- * Sample React Native App
- * https://github.com/facebook/react-native
+ * cute_pixel — 像素风 React Native + Godot 通用底座入口
  *
- * @format
+ * 业务模块按 Module-First Flat 加到 app/features/{module}/,
+ * 详见 doc/cute_pixel_plan/architecture.md。
  */
 
 import "setimmediate"; // Required by New Architecture
-import {
-  type GodotNode,
-  type GodotSignal,
-  RTNGodot,
-  RTNGodotView,
-  runOnGodotThread,
-} from "@borndotcom/react-native-godot";
 import { NavigationContainer } from "@react-navigation/native";
-import {
-  createNativeStackNavigator,
-  type NativeStackScreenProps,
-} from "@react-navigation/native-stack";
-import * as Device from "expo-device";
-import * as FileSystem from "expo-file-system/legacy";
-import { useEffect } from "react";
-import { Button, Platform, StyleSheet, View } from "react-native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { StyleSheet, Text, View } from "react-native";
 
 type RootStackParamList = {
-  MainWindow: undefined;
-  SubWindow: undefined;
+  Home: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-function initGodot(name: string) {
-  if (RTNGodot.getInstance() != null) {
-    console.log("Godot was already initialized.");
-    return;
-  }
-  console.log("Initializing Godot");
+const HomePage = () => (
+  <View style={styles.container}>
+    <Text style={styles.title}>cute_pixel</Text>
+    <Text style={styles.subtitle}>底座已就绪</Text>
+    <Text style={styles.hint}>在 app/features/ 下加你的第一个模块</Text>
+  </View>
+);
 
-  runOnGodotThread(() => {
-    "worklet";
-    console.log("Running on Godot Thread");
-
-    if (Platform.OS === "android") {
-      RTNGodot.createInstance([
-        // Uncomment and fill in the correct IP address and port for debugging in the Godot Editor.
-        // Check the documentation for the complete procedure.
-        // "--remote-debug",
-        // "tcp://IP_ADDRESS:6007",
-        "--verbose",
-        "--path",
-        `/${name}`,
-        "--rendering-driver",
-        "opengl3",
-        "--rendering-method",
-        "gl_compatibility",
-        "--display-driver",
-        "embedded",
-      ]);
-    } else {
-      const args = [
-        // Uncomment and fill in the correct IP address and port for debugging in the Godot Editor.
-        // Check the documentation for the complete procedure.
-        // "--remote-debug",
-        // "tcp://IP_ADDRESS:6007",
-        "--verbose",
-        "--main-pack",
-        `${FileSystem.bundleDirectory}${name}.pck`,
-        "--display-driver",
-        "embedded",
-      ];
-
-      if (Device.isDevice) {
-        args.push("--rendering-driver", "opengl3", "--rendering-method", "gl_compatibility");
-      } else {
-        args.push("--rendering-driver", "metal", "--rendering-method", "mobile");
-      }
-
-      RTNGodot.createInstance(args);
-    }
-
-    const Godot = RTNGodot.API();
-    const v = Godot.Vector2();
-    v.x = 1.0;
-    v.y = 2.0;
-    console.log(`Godot Engine initialized:${v.x},${v.y}`);
-    const engine = Godot.Engine;
-    console.log("After Engine");
-    const sceneTree = engine.get_main_loop();
-    console.log("After Main Loop");
-    sceneTree.get_root();
-    console.log("After Get Root");
-  });
-}
-
-function pauseGodot() {
-  RTNGodot.pause();
-}
-
-function resumeGodot() {
-  RTNGodot.resume();
-}
-
-function destroyGodot() {
-  runOnGodotThread(() => {
-    "worklet";
-    RTNGodot.destroyInstance();
-  });
-}
-
-export interface AppController extends GodotNode {
-  open_window(windowName: string): void;
-  close_window(windowName: string): void;
-  window_status_update: GodotSignal<[string]>;
-}
-
-const instance = () => {
-  "worklet";
-
-  return RTNGodot.getInstance();
-};
-
-const appController = (): AppController | null => {
-  "worklet";
-  if (!instance()) return null;
-
-  const Godot = RTNGodot.API();
-  const engine = Godot.Engine;
-  const sceneTree = engine.get_main_loop();
-  const root = sceneTree.get_root();
-  const controller = root.find_child("AppController", true, false) as AppController | null;
-
-  if (!controller) return null;
-
-  if (!controller.has_connections("window_status_update")) {
-    controller.window_status_update.connect((message: string) => {
-      console.log(message);
-    });
-  }
-
-  return controller;
-};
-
-const App = () => {
-  const openSubwindow = () => {
-    runOnGodotThread(() => {
-      "worklet";
-      const controller = appController();
-      if (!controller) return;
-      controller.open_window("subwindow");
-    });
-  };
-
-  const closeSubwindow = () => {
-    runOnGodotThread(() => {
-      "worklet";
-      const controller = appController();
-      if (!controller) return;
-      controller.close_window("subwindow");
-    });
-  };
-
-  const MainWindow = ({ navigation }: NativeStackScreenProps<RootStackParamList, "MainWindow">) => {
-    return (
-      <View style={styles.container}>
-        <View style={styles.buttonContainer}>
-          <Button
-            title="Start"
-            onPress={() => {
-              console.log("Starting Godot...");
-              initGodot("GodotTest");
-            }}
-          />
-          <Button
-            title="Stop"
-            onPress={() => {
-              destroyGodot();
-            }}
-          />
-          <Button title="Pause" onPress={pauseGodot} />
-          <Button title="Resume" onPress={resumeGodot} />
-          <Button
-            title="Open Window"
-            onPress={() => {
-              navigation.navigate("SubWindow");
-            }}
-          />
-        </View>
-        <View style={styles.godotContainer}>
-          <RTNGodotView style={styles.godot} />
-        </View>
-      </View>
-    );
-  };
-
-  const SubWindow = ({ navigation }: NativeStackScreenProps<RootStackParamList, "SubWindow">) => {
-    useEffect(() => {
-      openSubwindow();
-      return () => {
-        closeSubwindow();
-      };
-    }, []);
-    return (
-      <View style={styles.container}>
-        <View style={styles.buttonContainer}>
-          <Button
-            title="Close"
-            onPress={() => {
-              navigation.goBack();
-            }}
-          />
-        </View>
-        <View style={styles.godotContainer}>
-          <RTNGodotView style={styles.godot} windowName="subwindow" />
-        </View>
-      </View>
-    );
-  };
-
-  return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName="MainWindow">
-        <Stack.Screen name="MainWindow" component={MainWindow} />
-        <Stack.Screen
-          name="SubWindow"
-          component={SubWindow}
-          options={{
-            headerBackVisible: false,
-          }}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
-  );
-};
+const App = () => (
+  <NavigationContainer>
+    <Stack.Navigator initialRouteName="Home">
+      <Stack.Screen name="Home" component={HomePage} options={{ headerShown: false }} />
+    </Stack.Navigator>
+  </NavigationContainer>
+);
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    flexDirection: "column",
-  },
-  headerContainer: {
-    flex: 1,
-    flexDirection: "row",
-    backgroundColor: "red",
-    padding: 5,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  buttonContainer: {
-    flex: 1,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    alignItems: "center",
-    height: 20,
-  },
-  headerText: {
-    fontSize: 15,
-    color: "white",
-  },
-  headerButton: {
-    flex: 2,
-    color: "white",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  godotContainer: {
-    flex: 8,
-    padding: 20,
-  },
-  testContainer: {
-    flex: 2,
-    backgroundColor: "darkblue",
-    padding: 10,
-  },
-  godot: {
-    flex: 1,
-    padding: 0,
-    margin: 0,
-  },
+  container: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32 },
+  title: { fontSize: 32, fontWeight: "600", marginBottom: 8 },
+  subtitle: { fontSize: 16, color: "#666", marginBottom: 16 },
+  hint: { fontSize: 13, color: "#999", textAlign: "center" },
 });
 
 export default App;
