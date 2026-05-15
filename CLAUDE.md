@@ -205,7 +205,7 @@ ADR 编号从 001 起,不 supersede 任何外部 ADR。
 - `yarn lint` — `biome check .`(只 lint,不 typecheck)
 - `yarn lint:fix` — `biome check --write .`(自动 fix 能 fix 的)
 - `yarn format` — `biome format --write .`
-- `yarn test` — Jest(目前只有 `app/__tests__/App.test.tsx` 一个 smoke test)
+- `yarn test` — Jest(`--passWithNoTests`,目前无测试;真测试随第一个 demo 模块用 RNTL/Detox 时一起加)
 - `yarn ios` / `yarn android` — 跑 iOS Sim / Android emulator/真机
 - `yarn start` — Metro bundler
 
