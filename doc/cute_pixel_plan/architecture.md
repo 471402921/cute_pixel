@@ -40,7 +40,9 @@ cute_pixel/
 │   └── decisions/
 ├── app/                              # RN 源码根
 │   ├── main.tsx                      # 入口                                  [planned]
-│   ├── App.tsx                       # 根组件                                [planned]
+│   ├── App.tsx                       # 根组件                                [in-use]
+│   ├── types/                        # 第三方包的本地 .d.ts 兜底             [scaffolded]
+│   │   └── borndotcom__react-native-godot.d.ts  # @borndotcom/react-native-godot 1.0.1 不带类型,本地补最小 surface;命名 = scope__pkg.d.ts;包出官方类型后删
 │   ├── navigation/                   # 导航配置(React Navigation)         [planned]
 │   ├── theme/                        # 主题                                  [planned]
 │   ├── i18n/                         # 国际化资源(zh / en JSON)           [planned]
