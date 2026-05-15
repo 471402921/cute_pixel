@@ -11,6 +11,81 @@
 - ✅ B2(基础设施):baseline 平移 + 死代码清理 + `app/`/`godot_project/`/`scripts/` 重组 + Biome
 - ⏳ B2(继续):Module-First Flat 真正落地(`app/services/godot/` 等) + 6 个 `cute-pixel-*` skill + 第一个 demo 模块
 
+## 使用
+
+### 准备开发环境
+
+| 工具 | 版本 | 备注 |
+|---|---|---|
+| Node | 22 LTS | corepack 自带,用来拉 yarn 4 |
+| Xcode | 26+(iOS 用户) | 含 iOS Simulator |
+| Android Studio + SDK + AVD | 最新 | AVD 必须 arm64-v8a([conventions §14c](doc/cute_pixel_plan/conventions.md#14c-android-ndk--镜像准备)) |
+| Godot 编辑器 | **4.5.x 钉死** | 不能用 4.6+([ADR-002](doc/cute_pixel_plan/decisions/ADR-002-godot-as-pixel-engine-via-react-native-godot.md)) |
+| OpenJDK | 21 | Android build |
+| Ruby + bundler | 2.6+ + 2.4.1 user-install | iOS CocoaPods([conventions §14d](doc/cute_pixel_plan/conventions.md#14d-ios-ruby--bundler)) |
+
+### 安装
+
+```bash
+# 1. yarn 4 via corepack(Node 22+ 自带)
+corepack enable
+
+# 2. JS 依赖
+yarn install
+yarn download-prebuilt          # 拉 react-native-godot 的 LibGodot prebuilt
+
+# 3. 配 Godot 4.5.x 编辑器路径(写入 shell rc)
+echo 'export GODOT_EDITOR=/Applications/Godot-4.5.app/Contents/MacOS/Godot' >> ~/.zshrc
+source ~/.zshrc
+
+# 4. iOS 用户:Pods(首次 + Pod 更新时)
+cd ios && bundle install && bundle exec pod install && cd ..
+```
+
+### 跑
+
+```bash
+yarn start                      # Metro bundler(后台跑,留一个终端)
+yarn ios                        # iOS Simulator
+yarn android                    # Android Emulator 或 USB 真机
+```
+
+### 改了 Godot 场景 / GDScript 后
+
+Godot 资产打包成 `.pck` 嵌进 native 包,改完要重新导出再 build:
+
+```bash
+./scripts/export_godot_GodotTest.sh ios         # 产出 ios/GodotTest.pck
+./scripts/export_godot_GodotTest.sh android     # 产出 android/app/src/main/assets/GodotTest/
+```
+
+只改 RN 侧 JS / TS 不需要重导,Metro 会热更。
+
+### 项目结构
+
+```
+cute_pixel/
+├── app/                  # RN 源码(Module-First Flat,业务模块平铺在 features/)
+├── godot_project/        # Godot 4.5 工程(像素 asset 编排;由 Godot 编辑器打开)
+├── proto/                # RN ↔ Godot 通信契约(ADR-007;权威 messages.ts + 镜像 messages.gd)
+├── scripts/              # Godot 导出脚本等
+├── doc/cute_pixel_plan/  # 架构 / 约定 / ADR(本仓的"为什么这样做")
+├── ios/                  # 自动生成的 RN iOS native 工程
+└── android/              # 自动生成的 RN Android native 工程
+```
+
+业务开发新模块的具体规则见 [architecture.md](doc/cute_pixel_plan/architecture.md):4 条铁律 + Module-First Flat + 轻 DDD 视角。
+
+### 检查 / 测试
+
+```bash
+yarn check                # biome check + tsc --noEmit;commit 前必须 0 error
+yarn lint                 # 只 lint
+yarn lint:fix             # 自动 fix
+yarn format               # 格式化
+yarn test                 # jest --passWithNoTests(暂无 test;真测随第一个 demo 加)
+```
+
 ## 核心选型(Day-0 + B1 后定型)
 
 | 项 | 选择 |
