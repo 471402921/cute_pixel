@@ -4,7 +4,7 @@
 
 ## 仓库状态
 
-工程骨架已搭(`app/` / `godot_project/` / `scripts/` / Biome / yarn 4),iOS Sim + Android Emulator + Android 真机三平台都跑通过。架构文档里的 `app/services/godot/` `app/shared/` `app/features/` `app/_template/` `app/navigation/` `app/theme/` `app/i18n/` `e2e/` 等仍是 `planned`,等真正 Module-First Flat 落地。
+工程骨架已搭(`app/` / `godot_project/` / `proto/` / `scripts/` / Biome / yarn 4),iOS Sim + Android Emulator + Android 真机三平台都跑通过。架构文档里的 `app/services/godot/` `app/shared/` `app/features/` `app/_template/` `app/navigation/` `app/theme/` `app/i18n/` `e2e/` `proto/messages.ts` `proto/messages.gd` 等仍是 `planned`,等真正 Module-First Flat + ADR-007 契约落地。
 
 进度:
 
@@ -71,9 +71,9 @@ features/{module}/
 - **`shared/`** — 跨模块、且依赖 React 组件树的 UI,或带跨模块业务状态的 store(`StateView`、`useUserStore` 等)。
 - 模糊时优先放 `shared/`,后悔再迁。**单一模块独占的东西不放这里**,放进 `features/{module}/` 内部。
 
-## 像素引擎边界(B1 后定型)
+## 像素引擎边界(B1 后定型 + ADR-007 通信契约)
 
-Godot 由 `services/godot/` **单点封装**,业务模块**不**能直接 `import 'react-native-godot'`。
+Godot 由 `services/godot/` **单点封装**,业务模块**不**能直接 `import 'react-native-godot'`。RN ↔ Godot 通信契约定义在 [proto/](proto/) 仓库根目录(详见 [ADR-007](doc/cute_pixel_plan/decisions/ADR-007-rn-godot-communication-contract.md))。
 
 ### Engine 生命周期 = App 生命周期(单实例常驻)
 
@@ -81,7 +81,7 @@ Godot 由 `services/godot/` **单点封装**,业务模块**不**能直接 `impor
 
 - App 进后台:`RTNGodot.pause()`
 - App 回前台:`RTNGodot.resume()`
-- **业务模块不能 create / destroy engine**,只能通过 `godotApi` swap scene
+- **业务模块不能 create / destroy engine**,只能通过 `<PixelView>` mount/unmount 间接触发 scene swap
 - 原因:borndotcom 1.0.1 的 `destroyInstance` 有 Hermes GC × `GodotHostObject` 析构竞态,实测 SIGSEGV(详见 [_B1_REPORT.md §6](doc/cute_pixel_plan/_B1_REPORT.md))
 
 ### PixelView Portal 模式
@@ -91,32 +91,38 @@ Godot 由 `services/godot/` **单点封装**,业务模块**不**能直接 `impor
 业务模块**不直接**挂 `RTNGodotView`(真 view 只在 `GodotProvider` 里挂一份)。模块用 `<PixelView scene="..." />`,这是个 portal placeholder:
 
 - `<PixelView>` 用 `onLayout` 测自己的 frame → 告诉 GodotProvider"我要在这块区域显示某 scene"
-- GodotProvider 把 RTNGodotView 移动到该 frame + 调 `godotApi.loadScene(name)`
+- GodotProvider 把 RTNGodotView 移动到该 frame + 自动发 `SCENE_LOAD` Command(`<PixelView>` unmount 时自动 `SCENE_UNLOAD`)
+- 业务模块**不直接**发 scene-level Command,详见 [conventions §16](doc/cute_pixel_plan/conventions.md#16-scene-生命周期by-pixelview)
 
 模块的 mental model:**"我需要某 scene 显示在某区域"**,不是"我要一个 Godot view"。
 
-### 状态推送(单向)
+### 通信契约:single typed message bus(ADR-007)
+
+通信通道收敛到一对方法 + 一组消息类型联合(zod discriminated union),定义在 `proto/messages.ts`(权威)+ `proto/messages.gd`(GDScript 镜像):
 
 ```
-{Module}Store(Zustand,业务状态唯一真理)
+{Module}Store(Zustand,业务态唯一真理)
         │ subscribe(selector)
         ▼
 runOnGodotThread(() => {
-  "worklet";                                    ← 必须的指令注释
-  godotApi.sendEntityState(entityId, state)
+  "worklet";                                       ← 必须的指令注释
+  godotBridge.send({ type: "...", payload: ... }) ← 业务实际通过 services/godot/{domain}Commands.ts helper
 })
         │
         ▼
-Godot {Entity}Node.applyState(state)
+GD 端 MessageBridge.gd dispatch by type → 对应 Scene/Entity 的 handler
 ```
 
-详见 [doc/cute_pixel_plan/pixel-foundation.md](doc/cute_pixel_plan/pixel-foundation.md)。
+GD → RN 反向:`godotBridge.subscribe(handler)` 收 Event,handler 调 store action 改业务态。
 
-### 硬性约束(违反 = 跑不起来)
+**状态权属(铁律,ADR-007)**:RN 拥有可持久化业务态(hunger / level / 进度),GD 拥有渲染态(动画帧 / tween / 粒子);**GD 不主动改业务态**——所有业务态变化都是 RN 收到 Event 后,RN 自己改 store。
+
+### 硬性约束(违反 = 跑不起来 / 跑乱了)
 
 - **Godot 编辑器钉死 4.5.x**:LibGodot runtime 在 `try_open_pack()` 硬 abort 高于自己版本的 .pck;`GODOT_EDITOR` env 必须显式指向 4.5.app
-- **所有 RN→Godot API 调用必须在 worklet 里**:`runOnGodotThread(() => { "worklet"; godotApi.* })`,详见 [conventions §13](doc/cute_pixel_plan/conventions.md#13-worklet-契约)
+- **所有 RN→Godot API 调用必须在 worklet 里**:`runOnGodotThread(() => { "worklet"; godotBridge.* })`,详见 [conventions §13](doc/cute_pixel_plan/conventions.md#13-worklet-契约)
 - **iOS Podfile 必须带 fmt base.h patch**:RN 0.81 + Xcode 26.4 stack 的 `consteval` 编译错误,RN ≥ 0.84 后可删,详见 [conventions §14](doc/cute_pixel_plan/conventions.md#14-godot-env--native-build-patches)
+- **业务不直接拼 message**:走 `services/godot/{domain}Commands.ts` helper 调用;改 message 形态必双侧同改 `proto/messages.ts` + `proto/messages.gd`
 
 ## Status 标记——写 import 前必须核对
 
@@ -160,6 +166,8 @@ core 服务:      ADR → TechPack → 手工实装 → review
 - **跨模块通信(§11)** — 共享 store > 共享 service > 事件总线。**事件总线不是用来同步状态的**(存事件等于隐式状态,违背单一真理)。
 - **Worklet 契约(§13,B1 后追加)** — RN→Godot API 调用必须在 `runOnGodotThread(() => { "worklet"; ... })` 里,违反 = SIGSEGV / 静默失败。
 - **Godot env + native patches(§14,B1 后追加)** — `GODOT_EDITOR` 指 4.5.app + Podfile fmt patch + Android NDK 27/28 双装。
+- **Bridge 错误(§15,ADR-007 后追加)** — `godotBridge.send/subscribe` fail-soft;无效 message → silent drop + `BRIDGE_ERROR` Event;**底座不自动重启 engine**。
+- **Scene 生命周期(§16,ADR-007 后追加)** — 业务**不直接**发 `SCENE_LOAD/UNLOAD`,由 `<PixelView>` mount/unmount 隐式触发。
 - **后端契约** — 响应 `{code, message, data, traceId}`,`code === 0` 为成功;HTTP 错误由 network 拦截器映射成 `Failure` 类型。后端接入前 `{module}Api.ts` 返 mock,接入时只改这一个文件。
 
 ## ADR 索引
@@ -172,6 +180,7 @@ core 服务:      ADR → TechPack → 手工实装 → review
 | [004](doc/cute_pixel_plan/decisions/ADR-004-rn-bare-workflow.md) | RN Bare + Expo modules + 工具链 | Accepted(2026-05-11 修订) |
 | [005](doc/cute_pixel_plan/decisions/ADR-005-godot-as-asset-editor.md) | Godot 编辑器作为 asset 编排工具 | Accepted |
 | [006](doc/cute_pixel_plan/decisions/ADR-006-spec-driven-with-strong-gates.md) | Spec-driven 流水线与强门禁 | Accepted |
+| [007](doc/cute_pixel_plan/decisions/ADR-007-rn-godot-communication-contract.md) | RN ↔ Godot 通信契约 v0.1(message bus + 状态权属 + proto/) | Accepted(2026-05-15) |
 
 ADR 编号从 001 起,不 supersede 任何外部 ADR。
 

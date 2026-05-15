@@ -6,9 +6,9 @@
 
 | 文件 | 用途 | Status |
 |---|---|---|
-| `architecture.md` | 模块边界 / 依赖规则 / 目录结构 | Decided(B1 验证后版本对齐) |
-| `conventions.md` | 编码标准 / 错误 / i18n / 测试 / lint / worklet / native build patches | Decided(B1 验证后追加 §13-14) |
-| `pixel-foundation.md` | RN ↔ Godot 嵌入范式 / GodotProvider + PixelView Portal / 灯光 / 业务实体 | Decided(B1 验证后大改) |
+| `architecture.md` | 模块边界 / 依赖规则 / 目录结构 / 轻 DDD 视角 | Decided(B1 验证 + ADR-007 后小修) |
+| `conventions.md` | 编码标准 / 错误 / i18n / 测试 / lint / worklet / native build patches / bridge fail-soft / scene 生命周期 | Decided(B1 验证后追加 §13-14;ADR-007 后追加 §15-16) |
+| `pixel-foundation.md` | RN ↔ Godot 嵌入范式 / GodotProvider + PixelView Portal / message bus / 灯光 / 业务实体 | Decided(B1 验证后大改;ADR-007 后追加通信契约) |
 | `decisions/` | ADR(架构决策记录) | 全部 Accepted |
 | `_B1_REPORT.md` | B1 集成验证报告(react-native-godot example 跑通过程 + 决策影响) | Final(2026-05-11) |
 
@@ -22,6 +22,7 @@
 | ADR-004 | RN Bare workflow + Expo modules,配套工具链 | Accepted | 2026-05-11 修订(yarn 4 / Expo modules / 版本锁全套) |
 | ADR-005 | Godot 编辑器作为 Asset 编排工具 | Accepted | |
 | ADR-006 | Spec-driven 流水线与强门禁 | Accepted | |
+| ADR-007 | RN ↔ Godot 通信契约 v0.1 | Accepted | 2026-05-15 加(message bus + 状态权属 + proto/) |
 
 ## 写作纪律
 

@@ -150,27 +150,27 @@ HTTP 异常 / zod parse 失败  →  services/network 拦截器  →  Failure(se
 
 ```typescript
 import { runOnGodotThread } from 'react-native-worklets-core';
-import { godotApi } from '@/services/godot/godotApi';
+import { godotBridge } from '@/services/godot/godotBridge';
 
-// ✅ 正确
+// ✅ 正确(本例直接调 bridge.send 演示 worklet 形态;实际业务应通过 services/godot/{domain}Commands.ts helper)
 function feedPet(petId: string, foodType: string) {
   runOnGodotThread(() => {
     "worklet";  // ← 必须的 directive
-    godotApi.sendEntityState(petId, { eating: foodType });
+    godotBridge.send({ type: "PET_FEED", payload: { petId, food: foodType } });
   });
 }
 
 // ❌ 错误:直接在 React 渲染期 / setState 回调 / 主 JS 线程调
 const PetPage = () => {
   const pet = usePetStore((s) => s.pet);
-  godotApi.sendEntityState(pet.id, { ... });  // 报错或行为不可预测
+  godotBridge.send({ type: "PET_FEED", payload: { petId: pet.id, food: "fish" } });  // 报错或行为不可预测
   return <PixelView scene="pet_world" />;
 };
 ```
 
-**Why**:`react-native-worklets-core` 把函数序列化到 Godot 线程上执行。直接在主 JS 线程调 `godotApi.*` 会落到"background 线程"概念,无法完整访问 Scene Tree;且对象引用不能跨 JS 上下文传递,会引发悄无声息的 bug 或崩溃(详见 [react-native-godot README §Threading](https://github.com/borndotcom/react-native-godot#threading-and-javascript-in-react-native) + [_B1_REPORT.md §7b](_B1_REPORT.md))。
+**Why**:`react-native-worklets-core` 把函数序列化到 Godot 线程上执行。直接在主 JS 线程调 `godotBridge.*` / `RTNGodot.*` 会落到"background 线程"概念,无法完整访问 Scene Tree;且对象引用不能跨 JS 上下文传递,会引发悄无声息的 bug 或崩溃(详见 [react-native-godot README §Threading](https://github.com/borndotcom/react-native-godot#threading-and-javascript-in-react-native) + [_B1_REPORT.md §7b](_B1_REPORT.md))。
 
-**Lint 强制(planned)**:工程骨架预设 custom Biome / eslint plugin,识别非 worklet 上下文调 `godotApi.*` / `RTNGodot.*` → error。在 plugin 落地前由 review skill 人工检查。
+**Lint 强制(planned)**:工程骨架预设 custom Biome / eslint plugin,识别非 worklet 上下文调 `godotBridge.*` / `RTNGodot.*` → error。在 plugin 落地前由 review skill 人工检查。
 
 ### 14. Godot env + Native Build Patches
 
@@ -230,3 +230,23 @@ end
 
 - macOS 系统 Ruby 2.6.10 + `gem install --user-install bundler -v 2.4.1` 即可(不需 rbenv/asdf)
 - 项目内 `bundle config set --local path 'vendor/bundle'` 把 cocoapods 装到项目目录,不污染系统(详见 [_B1_REPORT.md §3a](_B1_REPORT.md))
+
+### 15. Bridge 错误恢复(fail-soft)
+
+通过 `services/godot/godotBridge` 的 `send` / `subscribe` **不抛异常**,默认 fail-soft:
+
+- **RN → GD**:无效 message(zod 校验失败 / GD 端无 handler)→ GD silent drop + emit `{type: "BRIDGE_ERROR", payload: {...}}` 回 RN;RN handler 收到 log,**不**自动重试,**不**panic
+- **GD → RN**:RN handler 抛错 → `godotBridge` 内部 `try/catch` + `Logger.error` 记录,不影响其他订阅者
+- **GD 进程死掉**:`GodotProvider` 暴露 `engineStatus`("running / paused / failed"),失败由业务模块通过 `<StateView engineFailure={...}>` 兜底展示;**底座不自动重启 engine**(避免无限崩溃环)
+
+具体 `BRIDGE_ERROR` payload 形态在第一个 demo 落地时定型。详见 [ADR-007 Deferred](decisions/ADR-007-rn-godot-communication-contract.md#deferred留待第一个-demo-模块暴露需求后单独-adr)。
+
+### 16. Scene 生命周期(by `<PixelView>`)
+
+业务模块**不直接**发 `SCENE_LOAD` / `SCENE_UNLOAD` Command。Scene 的 load/unload 触发由 `<PixelView>` 隐式管理:
+
+- `<PixelView scene="x" />` mount → 进入视口 → `GodotProvider` 自动发 `SCENE_LOAD`
+- `<PixelView>` unmount → 离开视口 → `GodotProvider` 自动发 `SCENE_UNLOAD`(或 `SCENE_PAUSE`,具体策略由 Provider 内部决定)
+- 业务模块只决定"我现在要不要显示像素世界",通过 mount/unmount `<PixelView>` 表达
+
+例外:scene 内部状态 reset(非 load/unload)由模块发自己的 domain Command(`PET_RESET` 等),不是 scene-level 的事。详见 [pixel-foundation §加载契约](pixel-foundation.md#加载契约scene-swap非-engine-restart)。

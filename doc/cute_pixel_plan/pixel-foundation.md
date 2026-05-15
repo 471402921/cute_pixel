@@ -30,12 +30,12 @@ Godot 是**像素渲染的实现细节**,通过 `services/godot/` **单点桥接
 services/godot/
 ├── GodotProvider.tsx     # ⭐ 单例 RTNGodotView 持有方,挂 NavigationContainer 同级或更上层;engine 与 app 同生死
 ├── PixelView.tsx         # ⭐ Portal placeholder,onLayout 报 frame 给 GodotProvider,告诉它"在这块区域显示某 scene";不持有真 view
-├── godotBridge.ts        # 封装 react-native-godot 原生 signal
-├── godotEvents.ts        # 信号 / 事件 TypeScript 类型定义
-└── godotApi.ts           # 高层 API:loadScene / sendEntityState / subscribeSignal;**所有调用必须在 worklet 里**
+├── godotBridge.ts        # ⭐ 通信契约入口——`send(cmd)` + `subscribe(handler)` 两个方法封装(详见 ADR-007)
+├── {domain}Commands.ts   # 各 domain 的语义层 helper(`feedPet(...)` 内部 = `bridge.send({type: "PET_FEED", ...})`)
+└── godotEvents.ts        # Event handler 注册的语义封装(可选,简单场景直接用 bridge.subscribe)
 ```
 
-业务模块通过 `godotApi` + `<PixelView>` 与 Godot 通信,**不**直接 import `react-native-godot`。这条规则使 features/ 与具体引擎解耦——理论上换一个引擎(改 `services/godot/` 内部实现)业务代码不动。
+业务模块通过 `<PixelView>` + `services/godot/{domain}Commands.ts` 与 Godot 通信,**不**直接 import `react-native-godot`、**不**直接拼 `bridge.send` 的 message。这条规则使 features/ 与具体引擎、具体 message 形态都解耦——理论上换一个引擎(改 `services/godot/` 内部 + `proto/` 镜像)业务代码不动。
 
 ## GodotProvider + PixelView Portal 架构(B1 验证后定的硬约束)
 
@@ -57,7 +57,7 @@ borndotcom react-native-godot 1.0.1 的 `destroyInstance()` 有 Hermes GC × `Go
 │ │ GodotProvider (services/godot/)                      │ │
 │ │  - 唯一持有 <RTNGodotView>(absolute 定位 + zIndex) │ │
 │ │  - 收 PixelView 的 frame 信息                        │ │
-│ │  - 调 godotApi.loadScene / pause / resume            │ │
+│ │  - 触发 SCENE_LOAD Command / pause / resume         │ │
 │ │ ┌──────────────────────────────────────────────────┐ │ │
 │ │ │ NavigationContainer                              │ │ │
 │ │ │   ├─ HomeStack                                   │ │ │
@@ -79,16 +79,17 @@ borndotcom react-native-godot 1.0.1 的 `destroyInstance()` 有 Hermes GC × `Go
 | 谁 | 能做什么 | 不能做什么 |
 |---|---|---|
 | `GodotProvider` | 持有唯一 RTNGodotView;create / pause / resume engine;管理 scene 切换 | 暴露 RTNGodotView 给业务模块 |
-| `services/godot/godotApi` | 提供 loadScene / sendEntityState / subscribeSignal | 暴露原始 react-native-godot API 给业务 |
+| `services/godot/godotBridge` | 暴露 `send(cmd)` + `subscribe(handler)` 两个方法,封装 react-native-godot 原生 API | 暴露原始 react-native-godot API 给业务;暴露 third 个方法 |
+| `services/godot/{domain}Commands.ts` | 提供语义层 helper(`feedPet(...)` 内部 `bridge.send`) | 跳过 bridge 直接调 react-native-godot |
 | `<PixelView>` | onLayout 报 frame;请求某 scene | 持有真 view;管理 engine 生命周期 |
-| 业务模块 | 用 `<PixelView scene="..." />` 占位;通过 `godotApi.sendEntityState` 推状态(必须在 worklet 里) | create / destroy engine;直接 import react-native-godot |
+| 业务模块 | 用 `<PixelView scene="..." />` 占位;通过 `services/godot/{domain}Commands.ts` 调 helper(必须在 worklet 里) | create / destroy engine;直接 import react-native-godot;裸调 `bridge.send({type, ...})` 不经 helper |
 
 ### Engine 生命周期
 
 | 时机 | 行为 |
 |---|---|
 | App 冷启动 | GodotProvider 在 splash 期间调 `RTNGodot.createInstance(...)` 预热(~500ms-1s);完成前 PixelView 显示 loading |
-| 模块间导航 | engine 不动,scene 已加载时切换近乎瞬时;只有 scene 不同才调 `godotApi.loadScene(...)` |
+| 模块间导航 | engine 不动,scene 已加载时切换近乎瞬时;只有 scene 不同才发 `SCENE_LOAD` Command |
 | App 进后台 | `RTNGodot.pause()`,**不**销毁 |
 | App 回前台 | `RTNGodot.resume()` |
 | App 退出 | OS 回收进程,无需显式 destroy |
@@ -97,61 +98,91 @@ borndotcom react-native-godot 1.0.1 的 `destroyInstance()` 有 Hermes GC × `Go
 
 ## RN ↔ Godot 通信契约(底座关心的全部)
 
-### 状态推送(RN → Godot,单向)
+> 完整契约 ADR 见 [ADR-007](decisions/ADR-007-rn-godot-communication-contract.md)。本节为概念性架构描述;消息类型权威定义在 [`proto/messages.ts`](../../proto/messages.ts)(planned)+ GDScript 镜像 [`proto/messages.gd`](../../proto/messages.gd)(planned)。
+
+### 协议形态:single typed message bus
+
+通信通道**收敛到一对方法**:
+
+```typescript
+// services/godot/godotBridge.ts
+godotBridge.send(cmd: GodotCommand): void                                   // RN → GD
+godotBridge.subscribe(handler: (evt: GodotEvent) => void): Unsubscribe      // GD → RN
+```
+
+`GodotCommand` / `GodotEvent` 是 zod discriminated union(`{type, payload}`),定义在 `proto/messages.ts`。业务模块**不直接拼 message**,通过 `services/godot/{domain}Commands.ts` helper 调用:
+
+```typescript
+// services/godot/petCommands.ts(示意,具体形态待第一个 demo 落地)
+export const feedPet = (petId: string, food: FoodType) =>
+  runOnGodotThread(() => {
+    "worklet";
+    godotBridge.send({ type: "PET_FEED", payload: { petId, food } });
+  });
+```
+
+### 状态权属:RN 业务态 / GD 渲染态(铁律)
+
+| 谁拥有 | 职责 | 例子 |
+|---|---|---|
+| **RN** | 可持久化的**业务状态** | pet hunger / mood / level / 进度 |
+| **GD** | 仅生命周期内的**渲染状态** | 当前帧 / tween 进度 / 粒子 / 屏幕震动 |
+
+**GD 不主动改业务态**——所有业务态变更都是 RN 收到 Event 后,RN 自己改 store。详见 [ADR-007 §2](decisions/ADR-007-rn-godot-communication-contract.md)。
+
+### 状态推送(RN → GD,Command 通道)
 
 ```
-{Module}Store(Zustand,业务状态唯一真理)
+{Module}Store(Zustand,业务态唯一真理)
         │
         │ subscribe(selector) 监听变化
         ▼
 runOnGodotThread(() => {
   "worklet";                                    ← 必须的指令注释
-  godotApi.sendEntityState(entityId, state)
+  godotBridge.send({ type: "...", payload: ... })
 })
         │ (通过 react-native-godot worklet 桥接)
         ▼
-Godot 端 {Entity}Node.applyState(state)
+GD 端 MessageBridge.gd dispatch by type
         │
         ▼
-切换显示(怎么切换是 Godot 端的事)
+对应 Scene/Entity 的 handler 执行(动画 / tween / 状态切换)
 ```
 
 **Why worklet**:`react-native-worklets-core` 把函数序列化到 Godot 线程上执行,跟 react-native-reanimated 的 worklet 是同一套底层。直接在主 JS 线程调 `RTNGodot.API()` 会落到"background 线程"概念,无法完整访问 Scene Tree,且对象引用不能跨上下文传递。详见 [react-native-godot README §Threading](https://github.com/borndotcom/react-native-godot#threading-and-javascript-in-react-native)。
 
-**Godot 端 Node 不订阅 RN store**,只暴露 `applyState()` 让 RN 推。换 app 主体只换名字 `Pet → Plant / Fish / Villager`,模式不变。
-
-### 用户在像素世界内交互(Godot → RN)
+### 用户在像素世界内交互(GD → RN,Event 通道)
 
 ```
 用户在 Godot canvas 内 tap interactable Node
         │ Godot 处理 InputEvent
         ▼
-Godot emit_signal("entity_tapped", entityId, action)
+GD 端 MessageBridge.gd emit Event
         │ react-native-godot 桥接
         ▼
-RN godotApi.subscribeSignal('entity_tapped', handler)
+RN godotBridge.subscribe 注册的 handler 收到 evt
         │
         ▼
-handler 调对应 store action → 状态更新 → 推回 Godot(走上面那套 worklet 路径)
+handler 调对应 store action → 业务态更新 → store subscribe 推回 Command(再走上面的 worklet 路径)
 ```
 
-**Godot 端不直接修改 RN 业务状态**(避免双向数据流复杂化)。所有状态变更走 RN store → Godot 单向同步。
+**Godot 端不直接修改 RN 业务态**(铁律,见上)。所有业务态变更走 RN store,GD 只 emit Event 通知"发生了什么"。
 
-### Scene 进出场清理纪律(B1 后新增,具体 cleanup API `planned`)
+### Scene 进出场清理纪律(B1 后新增,具体 cleanup 形态 `planned`)
 
 因为 engine 跨模块常驻,**Godot side 状态默认不会自动 GC**(基于 B1 §6 "engine 跨模块常驻" 推断)。模块离开页面时必须主动收尾:
 
 | 类型 | 处理 |
 |---|---|
-| 业务实体 state(从 RN store 推过去的) | 不用收,下次进场时 RN store 推新值会覆盖 |
-| 模块临时性的粒子 / 一次性动画 / 临时灯光 | **必须**通过 `godotApi.sendEntityState(entityId, { phase: 'cleanup' })` 让 Godot Node 自己清,不能假装下次进场会 reset |
-| 模块加的 signal listener | `useEffect` 的 cleanup 函数里调 `godotApi.unsubscribeSignal(handler)` |
+| 业务态(从 RN store 推过去的) | 不用收,下次进场时 RN store 推新值会覆盖 |
+| 模块临时性的粒子 / 一次性动画 / 临时灯光(GD 渲染态) | **必须**通过 Command(`SCENE_CLEANUP` 或类似)让 GD 端清,不能假装下次进场会 reset |
+| 模块加的 `godotBridge.subscribe` listener | `useEffect` 的 cleanup 函数里调返回的 `Unsubscribe` |
 
 不规定的部分(交业务自定义):
 
-- 具体 entity state shape
-- 具体 signal 名称与参数
-- Godot 端 Node 内部如何实现 applyState
+- 具体 Command / Event 的 payload shape(由 `proto/messages.ts` 在第一个 demo 时定型)
+- GD 端 Scene 内部如何 dispatch handler
+- GD 端 Node 如何组织
 
 ## 业务实体在像素世界中的表现
 
@@ -159,11 +190,11 @@ handler 调对应 store action → 状态更新 → 推回 Godot(走上面那套
 
 通用模式(底座规定的契约):
 
-1. RN 端 `features/{entity}/{entity}Store.ts` 持有业务状态唯一真理
-2. store subscribe selector 变化 → **在 worklet 里**调用 `godotApi.sendEntityState(entityId, state)`
-3. Godot 端 `{Entity}Node` 暴露 `applyState(state)` 接收推送(**具体如何展现由设计师与 Godot 工程师决定**)
-4. 用户交互 → Godot 发 signal → RN handler 调用 store action → 状态更新 → 推回(再走步骤 2)
-5. 模块卸载时 cleanup 临时状态 + unsubscribe signal listener
+1. RN 端 `features/{entity}/{entity}Store.ts` 持有业务态唯一真理
+2. store subscribe selector 变化 → **在 worklet 里**调用 `services/godot/{entity}Commands.ts` 暴露的 helper(内部 `godotBridge.send`)
+3. GD 端 `MessageBridge.gd` 收到 Command → dispatch 到对应 Scene/Entity 的 handler(**具体如何展现由设计师与 Godot 工程师决定**)
+4. 用户交互 → GD 端 emit Event → RN `godotBridge.subscribe` 收到 → 调用 store action → 业务态更新 → 推回(再走步骤 2)
+5. 模块卸载时 cleanup 渲染态 Command + 调返回的 `Unsubscribe`
 
 实体在 Godot 端如何注册、如何实例化、如何组织节点树、动画状态机如何拆分等,**由 Godot 工程实践决定**,本底座不规定。
 
@@ -173,7 +204,7 @@ handler 调对应 store action → 状态更新 → 推回 Godot(走上面那套
 - **Godot canvas 外**(常规 RN UI 的 onPress 等):由 RN 自身处理
 - 两端通过 signal 通信,**不混线**:RN 不监听 PanGestureHandler 在 `<PixelView>` 之上(避免与 Godot 输入冲突)
 
-业务模块如果要在像素世界外触发像素世界内的行为(如点击外部按钮喂食),走 store action → worklet 包裹的 `godotApi.sendEntityState` 推 signal 给 Godot,**不**在 RN 端模拟一个 tap event 给 Godot。
+业务模块如果要在像素世界外触发像素世界内的行为(如点击外部按钮喂食),走 store action → worklet 包裹的 `services/godot/{domain}Commands.ts` helper 发 Command 给 Godot,**不**在 RN 端模拟一个 tap event 给 Godot。
 
 ## 设计师工作流与 Godot 工程内部
 
@@ -198,14 +229,14 @@ handler 调对应 store action → 状态更新 → 推回 Godot(走上面那套
 底座对 Godot 端的硬性约束**只有 3 条**:
 
 1. **场景文件路径稳定**:RN 端通过 `res://scenes/{name}.tscn` 加载,场景重命名/移动需同步更新 RN 端引用
-2. **Entity Node 暴露 applyState 与 emit signal 协议**:遵循上面的"RN ↔ Godot 通信契约"
+2. **GD 端实现 `MessageBridge.gd` 接收 Command + emit Event**:遵循 [`proto/messages.gd`](../../proto/messages.gd)(planned)的镜像约定,详见 [ADR-007](decisions/ADR-007-rn-godot-communication-contract.md);任何 Command/Event 的 payload 字段改动必须双侧同改
 3. **编辑器版本钉死 Godot 4.5.x**:LibGodot runtime 在 `try_open_pack()` 硬性 abort 高于自己版本的 .pck;`GODOT_EDITOR` env 必须显式指向 4.5.app,详见 [conventions §14](conventions.md#14-godot-env--native-build-patches)
 
 其他都是 Godot 工程内部的事,RN 端不介入。
 
 ## 加载契约(scene swap,非 engine restart)
 
-RN 端通过 `godotApi.preloadScene(sceneName)` 触发 Godot 端预加载,等待完成回调后再渲染 `<PixelView>`(期间 RN 端展示 loading UI)。
+RN 端通过 `services/godot/sceneCommands.ts` 的 helper(内部 `bridge.send({type: "SCENE_PRELOAD", ...})`)触发 GD 端预加载,等待对应 `SCENE_LOADED` Event 后再渲染 `<PixelView>`(期间 RN 端展示 loading UI)。
 
 **Engine 已在 app 启动时由 GodotProvider 初始化好**,所以加载流程是 **scene swap**,不是 engine restart:
 
@@ -216,10 +247,10 @@ PixelView mount → onLayout → 上报 frame
 GodotProvider 检查当前 scene
         │
         ├─ 同 scene:仅移动 RTNGodotView 到新 frame(无 reload)
-        └─ 不同 scene:godotApi.loadScene(name) → Godot 端切场景 → 完成回调 → 渲染
+        └─ 不同 scene:发 `SCENE_LOAD` Command → GD 端切场景 → 回 `SCENE_LOADED` Event → 渲染
 ```
 
-具体加载策略(同步/异步、缓存、内存管理、LRU 等)由 Godot 端实现,本底座不规定。RN 端只关心 preload 完成与否的回调。
+具体加载策略(同步/异步、缓存、内存管理、LRU 等)由 GD 端实现,本底座不规定。RN 端只关心 `SCENE_LOADED` Event 何时到达。
 
 ## 与具体 app 的边界
 

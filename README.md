@@ -17,6 +17,7 @@
 |---|---|
 | App 框架 | React Native 0.81 Bare + Expo modules autolinking([ADR-001](doc/cute_pixel_plan/decisions/ADR-001-react-native-as-app-framework.md), [ADR-004](doc/cute_pixel_plan/decisions/ADR-004-rn-bare-workflow.md)) |
 | 像素引擎 | Godot 4.5.x(编辑器版本钉死)+ LibGodot 4.5.1.migeran.2(via react-native-godot 1.0.1)([ADR-002](doc/cute_pixel_plan/decisions/ADR-002-godot-as-pixel-engine-via-react-native-godot.md)) |
+| RN ↔ Godot 通信 | Single typed message bus + RN/GD 状态权属铁律 + 仓库根 `proto/`([ADR-007](doc/cute_pixel_plan/decisions/ADR-007-rn-godot-communication-contract.md)) |
 | 状态管理 | Zustand([ADR-003](doc/cute_pixel_plan/decisions/ADR-003-state-management-zustand.md)) |
 | 包管理 | yarn 4 Berry(via corepack) |
 | Lint | Biome |

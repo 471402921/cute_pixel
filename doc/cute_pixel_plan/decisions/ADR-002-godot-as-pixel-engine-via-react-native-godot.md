@@ -47,7 +47,7 @@ status: Accepted
 
 - 由 `services/godot/GodotProvider` 在 app 启动时创建,挂在 `NavigationContainer` 同级或更上层
 - App 进后台调 `RTNGodot.pause()`、前台调 `RTNGodot.resume()`,**不调** `destroyInstance()`
-- 业务模块**不能** create / destroy engine,**只能**通过 `services/godot/godotApi` swap scene
+- 业务模块**不能** create / destroy engine,**只能**通过 `<PixelView>` mount/unmount 间接触发 scene swap(API 形态详见 [ADR-007](ADR-007-rn-godot-communication-contract.md))
 
 **Why**:
 
@@ -62,7 +62,7 @@ status: Accepted
 业务模块**不直接**挂 `RTNGodotView`(真 view 只在 `GodotProvider` 里挂一份)。模块用 `<PixelView scene="..." />`,这是个 portal placeholder:
 
 - `<PixelView>` 用 `onLayout` 测自己的 frame,告诉 GodotProvider"我要在这块区域显示某 scene"
-- GodotProvider 把 RTNGodotView 移动 / resize 到该 frame,调 `godotApi.loadScene(name)`
+- GodotProvider 把 RTNGodotView 移动 / resize 到该 frame,自动发 `SCENE_LOAD` Command(API 形态详见 [ADR-007](ADR-007-rn-godot-communication-contract.md))
 - 模块的 mental model:**"我需要某 scene 显示在某区域"**,不是"我要一个 Godot view"
 
 详细架构图 + 状态推送通路见 [pixel-foundation.md](../pixel-foundation.md) "GodotProvider + PixelView Portal"。

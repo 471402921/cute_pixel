@@ -61,6 +61,10 @@ cute_pixel/
 │   ├── features/                     # 业务模块(Module-First Flat)       [planned]
 │   └── _template/                    # 模块模板(给 module-gen skill 用)  [planned]
 ├── godot_project/                    # Godot 工程(详见 pixel-foundation.md) [planned]
+├── proto/                            # RN ↔ Godot 通信契约(单点真理)      [scaffolded]
+│   ├── README.md
+│   ├── messages.ts                   # zod schemas(RN 侧权威)              [planned]
+│   └── messages.gd                   # GDScript 镜像                          [planned]
 ├── android/                          # RN 默认 native
 ├── ios/
 ├── e2e/                              # Detox 测试                            [planned]
@@ -118,17 +122,61 @@ features/{module}/
 
 模糊时优先放 `shared/`,后悔了再迁。**单一模块独占的东西不放这里**,放进 `features/{module}/` 内部。
 
+## 轻 DDD 视角(可选解释器)
+
+底座的目录约定 + 4 条铁律已经隐式遵循 DDD 的核心精神。下表给出**等价词汇映射**——agent 与人协作时,可借助 DDD 名词进行架构层面讨论 / review,但**底座本身不强制使用 DDD 术语作为主词汇**(主词汇仍是 `Page` / `Store` / `Models` / `Api` / `services` / `shared` / `features`)。
+
+| 底座命名 | 等价 DDD 概念 | 备注 |
+|---|---|---|
+| `features/{module}/` | **Bounded Context** | 每个 feature 模块自治,边界由铁律 #1 强制 |
+| `{module}Models.ts` + zod schema | **Value Object** + 隐式 invariant 校验 | zod parse 即"对象创建时的不变量检查" |
+| `{module}Store.ts`(Zustand store + actions) | **Aggregate Root** + **Application Service** 合体 | 状态唯一真理 + 业务用例入口,合并以减少前端 ceremony |
+| `{module}Api.ts` | **Anti-Corruption Layer** | 翻译后端响应 → 领域模型,后端字段污染不外溢 |
+| `{Module}Page.tsx` | **Presentation Layer** | 只组合组件,不写 domain logic |
+| `services/` | **Infrastructure Layer** | 网络 / 存储 / Godot 桥接等技术能力 |
+| `shared/` | **Shared Kernel** | 多个 Bounded Context 都需要的 UI 或状态 |
+| 跨模块通信(共享 store > 共享 service > 事件总线) | **Context Mapping**(Shared Kernel / Customer-Supplier / Domain Events) | 见 [conventions §11](conventions.md#11-跨模块通信) |
+
+### 反模式速查(给 review 用)
+
+DDD 视角下几个经典反模式可作为 `/cute-pixel-review` 的检查项(planned):
+
+- **Anemic Domain Model**:`{module}Store.ts` 只有 setter,业务逻辑漂在 `{Module}Page.tsx` 里
+- **Smart UI**:`{Module}Page.tsx` 里出现 zod parse / 后端字段拼接 / 业务规则判断
+- **Boundary Leak**:`features/A/` import `features/B/` 内部文件,或后端原始字段从 `Api` 直接穿透到 `Page`
+- **Service-as-Domain**:`services/` 下出现"PetCarePolicy"这种业务概念(基础设施沾业务)
+
+### Models 上的"行为"边界
+
+`{module}Models.ts` 默认是**纯数据 + zod schema**(接近 DTO/VO)。允许的扩展:
+
+- **可以**:挂无副作用的派生计算方法(`pet.canBeFed()` 这种纯函数)
+- **不可以**:挂任何修改状态的方法——状态修改一律走 `{module}Store.ts` 的 action
+
 ## 像素引擎与底座
 
 像素渲染由 Godot 4.5.x 承担,通过 [react-native-godot](https://github.com/borndotcom/react-native-godot) 嵌入 RN(详见 [ADR-002](decisions/ADR-002-godot-as-pixel-engine-via-react-native-godot.md))。
 
-架构层面 RN ↔ Godot 边界(B1 验证后定型):
+架构层面 RN ↔ Godot 边界(B1 验证 + ADR-007 定型):
+
+### 物理边界
 
 - 所有 Godot 桥接通过 `services/godot/` **单点封装**,业务模块**不**直接 import `react-native-godot`
 - **唯一 Godot 引擎实例**由 `services/godot/GodotProvider` 在 app 启动时创建,挂在 `NavigationContainer` 同级或更上层,生命周期 = app 生命周期(永不 `destroyInstance` during normal navigation)
-- `features/` 内部需要嵌入像素场景时,使用 `services/godot/` 暴露的 `<PixelView scene="..." />`,这是个 **portal placeholder**——`onLayout` 上报 frame 给 GodotProvider,Provider 把 RTNGodotView 移到此位置 + 调 `godotApi.loadScene(name)`
+- `features/` 内部需要嵌入像素场景时,使用 `services/godot/` 暴露的 `<PixelView scene="..." />`,这是个 **portal placeholder**——`onLayout` 上报 frame 给 GodotProvider,Provider 把 RTNGodotView 移到此位置 + 触发 scene load
 - **所有 RN → Godot API 调用必须在 worklet 里**(`runOnGodotThread(() => { "worklet"; ... })`),详见 [conventions §13](conventions.md#13-worklet-契约)
-- RN ↔ Godot 通信契约、Asset 管线、灯光约定、业务实体在像素世界中表现等,详见 [pixel-foundation.md](pixel-foundation.md)
+
+### 通信契约(ADR-007)
+
+详见 [ADR-007](decisions/ADR-007-rn-godot-communication-contract.md):
+
+- **Wire 协议形态**:single typed message bus——`godotBridge.send(cmd)` / `godotBridge.subscribe(handler)`,所有 message 是 zod discriminated union;业务侧通过 `services/godot/{domain}Commands.ts` helper 调用,不直接拼 message
+- **状态权属(铁律)**:RN 拥有可持久化业务态(hunger / level / 进度),GD 拥有渲染态(动画帧 / tween / 粒子);**GD 不主动改业务态**——业务态变化必须 RN 收到 Event 后自己改 store
+- **协议位置**:[`proto/`](../proto/) 仓库根目录是双 runtime 的契约面,`messages.ts`(权威)+ `messages.gd`(镜像),改协议必双侧同改
+
+### 详细资料
+
+- RN ↔ Godot 通信细节、Asset 管线、灯光约定、业务实体在像素世界中表现等,详见 [pixel-foundation.md](pixel-foundation.md)
 
 ## 与后端的契约
 
