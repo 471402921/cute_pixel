@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://k8d3ftxcbr5j"]
+
+[ext_resource type="Texture2D" uid="uid://dobp2f0hvrjhf" path="res://resources/furniture_drawer_tall_wooden.png" id="1_aitnu"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_misjh"]
+size = Vector2(52, 11)
+
+[node name="FurnitureDrawerTallWooden" type="StaticBody2D"]
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("1_aitnu")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, 22)
+shape = SubResource("RectangleShape2D_misjh")

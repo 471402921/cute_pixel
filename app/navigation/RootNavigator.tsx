@@ -1,17 +1,27 @@
 /**
- * RootNavigator — 根导航;App.tsx 的唯一职责就是 mount 这个。
+ * RootNavigator — 根导航;App.tsx 的唯一职责就是在 <GodotProvider> 内 mount 这个。
  *
  * 业务 feature 新增 screen 时,在 RootStackParamList(types.ts)加 entry,
  * 然后在这里加 <Stack.Screen />。
+ *
+ * 当前 initialRouteName="Room" 直接落地第一个 demo;Home 留作回退 / 未来 launcher。
  */
 
-import { NavigationContainer } from "@react-navigation/native";
+import { DefaultTheme, NavigationContainer, type Theme } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StyleSheet, Text, View } from "react-native";
+import { RoomPage } from "../features/room/RoomPage";
 import { navigationRef } from "./navigationRef";
 import type { RootStackParamList } from "./types";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+// 让 NavigationContainer + 默认 scene 背景透明,使底层 GodotProvider 的
+// RTNGodotView(absoluteFill)能透过 PixelView 显出来。
+const TransparentTheme: Theme = {
+  ...DefaultTheme,
+  colors: { ...DefaultTheme.colors, background: "transparent" },
+};
 
 const HomePage = () => (
   <View style={styles.container}>
@@ -22,9 +32,13 @@ const HomePage = () => (
 );
 
 export const RootNavigator = () => (
-  <NavigationContainer ref={navigationRef}>
-    <Stack.Navigator initialRouteName="Home">
-      <Stack.Screen name="Home" component={HomePage} options={{ headerShown: false }} />
+  <NavigationContainer ref={navigationRef} theme={TransparentTheme}>
+    <Stack.Navigator
+      initialRouteName="Room"
+      screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "transparent" } }}
+    >
+      <Stack.Screen name="Room" component={RoomPage} />
+      <Stack.Screen name="Home" component={HomePage} />
     </Stack.Navigator>
   </NavigationContainer>
 );

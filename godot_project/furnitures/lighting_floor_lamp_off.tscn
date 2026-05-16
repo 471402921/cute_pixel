@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3 uid="uid://da3ec4wvw6xg"]
+
+[ext_resource type="Texture2D" uid="uid://c5ngl7h4dkc3x" path="res://resources/lighting_floor_lamp_off.png" id="1_gremk"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_fki0q"]
+
+[node name="LightingFloorLampOff" type="StaticBody2D"]
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("1_gremk")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, 19)
+shape = SubResource("CircleShape2D_fki0q")

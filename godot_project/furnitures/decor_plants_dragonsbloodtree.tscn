@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://vmct070pjvxg"]
+
+[ext_resource type="Texture2D" uid="uid://bnuik848smuej" path="res://resources/decor_plants_dragonsbloodtree.png" id="1_g7l9u"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ywxvt"]
+size = Vector2(20, 9)
+
+[node name="DecorPlantsDragonsbloodtree" type="StaticBody2D"]
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("1_g7l9u")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, 23.5)
+shape = SubResource("RectangleShape2D_ywxvt")

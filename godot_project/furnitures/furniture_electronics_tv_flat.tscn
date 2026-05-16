@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Texture2D" path="res://resources/electronics_tv_flat.png" id="1_tvflat"]
+
+[node name="FurnitureElectronicsTvFlat" type="StaticBody2D"]
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("1_tvflat")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]

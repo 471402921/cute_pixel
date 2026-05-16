@@ -11,7 +11,8 @@
 - ✅ B2(基础设施):baseline 平移 + 死代码清理 + 重组 + Biome
 - ✅ B2(契约层):ADR-007 + `proto/messages.ts/.gd` v0.1(SCENE_LOAD/UNLOAD + SCENE_LOADED/BRIDGE_ERROR)
 - ✅ B2(RN Phase A):`services/{error,logging,time,env,utils}` + `shared/{widgets/StateView,state,route-args}` + `app/navigation/`(`scaffolded`,等第一个 feature 接入)
-- ⏳ B2(继续):`services/godot/` 桥接实装 + 6 个 `cute-pixel-*` skill + 第一个 demo 模块
+- ✅ B2(第一个 demo,`cute_pet` 分支):`services/godot/` 实装 + WebSocket placeholder + `features/room/` 第一个 Module-First Flat 实例 + GD 端 MessageBridge.gd autoload + 像素风室内场景(godot-test 素材)。素材 polish(墙/家具 collision)清单见 [godot_project/TODO.md](godot_project/TODO.md)
+- ⏳ B2(继续):6 个 `cute-pixel-*` skill + 第二个 demo(暴露 Portal "frame 跟随" 真实需求)
 - 🔮 Phase B(等需求):`services/{network,storage,auth}` + ky / MMKV / keychain 装包
 - 🔮 Phase C(等设计稿):`app/theme/` + `app/i18n/`
 

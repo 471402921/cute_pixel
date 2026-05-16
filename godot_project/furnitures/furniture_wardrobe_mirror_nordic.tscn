@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://j5iag4oydy44"]
+
+[ext_resource type="Texture2D" uid="uid://jrhff3i4wme4" path="res://resources/furniture_wardrobe_mirror_nordic.png" id="1_2220y"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_amjmq"]
+size = Vector2(55, 10)
+
+[node name="FurnitureWardrobeMirrorNordic" type="StaticBody2D"]
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("1_2220y")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0.5, 14)
+shape = SubResource("RectangleShape2D_amjmq")

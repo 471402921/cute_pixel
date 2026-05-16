@@ -13,7 +13,8 @@
 - ✅ B2(基础设施):upstream example 平移为 working baseline,清理死代码,重组成 `app/` + `godot_project/` + `proto/` + `scripts/`,Biome 替换 ESLint+Prettier
 - ✅ B2(契约层):ADR-007 RN↔GD 通信契约 v0.1 + proto/messages.ts/.gd 最小集(SCENE_LOAD/UNLOAD + SCENE_LOADED/BRIDGE_ERROR)
 - ✅ B2(RN Phase A):services/{error, logging, time, env, utils} + shared/{widgets/StateView, state, route-args} + app/navigation/ 全套落地(scaffolded,无 features 在用)
-- ⏳ B2(继续):services/godot/ 桥接实装(GodotProvider + PixelView + godotBridge + sceneCommands) + 6 个 `cute-pixel-*` skill 套件 + 第一个 demo 模块
+- ✅ B2(第一个 demo,cute_pet 分支):services/godot/ 全套实装(GodotProvider + PixelView + godotBridge + sceneCommands) + services/realtime/ stub(WebSocket placeholder) + features/room/ 第一个 Module-First Flat 实例 + Godot 端 MessageBridge.gd autoload + 像素风室内场景(Lissyluo66/godot-test 素材) + autonomous character 状态机。iOS Sim E2E 跑通(scene 渲染 + RN↔GD message bus 验证)。素材层 polish(wall.tres physics_layer 未配、4 家具 CollisionShape 空)在 [godot_project/TODO.md](godot_project/TODO.md),等设计师跟进
+- ⏳ B2(继续):6 个 `cute-pixel-*` skill + 第二个 demo 模块(暴露 Portal "frame 跟随" 真实需求)
 - 🔮 Phase B(等真痛):services/{network, storage, auth} + ky/MMKV/keychain 装包
 - 🔮 Phase C(等设计稿):app/theme/ + app/i18n/(i18next + zh/en sync 检查)
 

@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://c4yr3lrjguwl2"]
+
+[ext_resource type="Texture2D" uid="uid://cite5bw46iq4l" path="res://resources/decor_plants.png" id="1_bbun6"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_5f3f0"]
+size = Vector2(22, 7)
+
+[node name="DecorPlants" type="StaticBody2D"]
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("1_bbun6")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(1, 21.5)
+shape = SubResource("RectangleShape2D_5f3f0")

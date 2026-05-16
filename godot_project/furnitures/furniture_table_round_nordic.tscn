@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://ddj555fvlr4rf"]
+
+[ext_resource type="Texture2D" uid="uid://dm8i0ifuiwune" path="res://resources/furniture_table_round_nordic.png" id="1_87ifn"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_fhql8"]
+size = Vector2(61.5, 7)
+
+[node name="FurnitureTableRoundNordic" type="StaticBody2D"]
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("1_87ifn")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(1, 19)
+shape = SubResource("RectangleShape2D_fhql8")

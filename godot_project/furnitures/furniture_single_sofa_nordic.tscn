@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://qcg0vdywjbb1"]
+
+[ext_resource type="Texture2D" uid="uid://criokr6opc1he" path="res://resources/furniture_single_sofa_nordic.png" id="1_s4orn"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_pikol"]
+size = Vector2(38, 29.5)
+
+[node name="FurnitureSingleSofaNordic" type="StaticBody2D"]
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("1_s4orn")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, 7.75)
+shape = SubResource("RectangleShape2D_pikol")

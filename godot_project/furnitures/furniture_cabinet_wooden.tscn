@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://c56dogvg6hkpu"]
+
+[ext_resource type="Texture2D" uid="uid://5akhn7pjx4e8" path="res://resources/furniture_cabinet_wooden.png" id="1_aissu"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_2tmi0"]
+size = Vector2(52, 8)
+
+[node name="FurnitureCabinetWooden" type="StaticBody2D"]
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("1_aissu")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0, 17)
+shape = SubResource("RectangleShape2D_2tmi0")
