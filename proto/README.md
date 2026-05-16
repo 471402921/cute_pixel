@@ -12,8 +12,8 @@ RN ↔ Godot 双 runtime 通信契约的**单点真理**。
 
 | 文件 | 状态 | 角色 |
 |---|---|---|
-| `messages.ts` | planned | RN 侧权威——zod discriminated union 定义所有 `GodotCommand` / `GodotEvent` |
-| `messages.gd` | planned | GDScript 侧镜像——常量 + 类型 hint,注释顶部写 `# Mirror of proto/messages.ts` |
+| `messages.ts` | scaffolded(v0.1) | RN 侧权威——zod discriminated union 定义所有 `GodotCommand` / `GodotEvent`。当前覆盖 SCENE_LOAD / SCENE_UNLOAD + SCENE_LOADED / BRIDGE_ERROR 最小集 |
+| `messages.gd` | scaffolded(v0.1) | GDScript 侧镜像——type 常量 + payload 注释 + helper 构造函数。改动必跟 messages.ts 同步 |
 
 ## 协议形态
 
@@ -32,4 +32,6 @@ RN ↔ Godot 双 runtime 通信契约的**单点真理**。
 
 ## 状态
 
-`messages.ts` / `messages.gd` 在第一个 demo 模块接 PixelView 时实装。当前为占位,等待 ADR-007 §Deferred 中标注的几个事项(版本字段、错误处理、entity registry)在第一个 demo 暴露真实需求后再决定形态。
+`messages.ts` / `messages.gd` v0.1 已落地最小集(SCENE_LOAD / SCENE_UNLOAD / SCENE_LOADED / BRIDGE_ERROR),让 PixelView Portal 流转能跑。
+
+后续追加触发条件:第一个 demo 模块接 PixelView 时,业务侧需要的 Command/Event(如 PET_FEED / PET_TAPPED)按需在两侧同时加。ADR-007 §Deferred 列的版本字段、entity registry、错误恢复策略等结构性扩展,也等真痛了再单独 ADR。

@@ -65,8 +65,8 @@ cute_pixel/
 ├── godot_project/                    # Godot 工程(详见 pixel-foundation.md) [planned]
 ├── proto/                            # RN ↔ Godot 通信契约(单点真理)      [scaffolded]
 │   ├── README.md
-│   ├── messages.ts                   # zod schemas(RN 侧权威)              [planned]
-│   └── messages.gd                   # GDScript 镜像                          [planned]
+│   ├── messages.ts                   # zod schemas(RN 侧权威)              [scaffolded v0.1]
+│   └── messages.gd                   # GDScript 镜像                          [scaffolded v0.1]
 ├── android/                          # RN 默认 native
 ├── ios/
 ├── e2e/                              # Detox 测试                            [planned]
