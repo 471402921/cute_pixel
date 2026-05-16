@@ -172,6 +172,7 @@ core 服务:      ADR → TechPack → 手工实装 → review
 - **Godot env + native patches(§14,B1 后追加)** — `GODOT_EDITOR` 指 4.5.app + Podfile fmt patch + Android NDK 27/28 双装。
 - **Bridge 错误(§15,ADR-007 后追加)** — `godotBridge.send/subscribe` fail-soft;无效 message → silent drop + `BRIDGE_ERROR` Event;**底座不自动重启 engine**。
 - **Scene 生命周期(§16,ADR-007 后追加)** — 业务**不直接**发 `SCENE_LOAD/UNLOAD`,由 `<PixelView>` mount/unmount 隐式触发。
+- **GD 侧分工(§17)** — `.tscn` / `.tres` / `.png` 设计师拥有,工程师 / AI **默认只能改 `.gd`**;紧急 hotfix 例外需 `DESIGN-HOTFIX:` commit 标记。AI 不要替设计师反推 viewport 坐标 / collision shape / 角色位置,写进 `godot_project/TODO.md` 让设计师跟进。
 - **后端契约** — 响应 `{code, message, data, traceId}`,`code === 0` 为成功;HTTP 错误由 network 拦截器映射成 `Failure` 类型。后端接入前 `{module}Api.ts` 返 mock,接入时只改这一个文件。
 
 ## ADR 索引

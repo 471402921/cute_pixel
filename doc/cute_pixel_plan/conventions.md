@@ -250,3 +250,35 @@ end
 - 业务模块只决定"我现在要不要显示像素世界",通过 mount/unmount `<PixelView>` 表达
 
 例外:scene 内部状态 reset(非 load/unload)由模块发自己的 domain Command(`PET_RESET` 等),不是 scene-level 的事。详见 [pixel-foundation §加载契约](pixel-foundation.md#加载契约scene-swap非-engine-restart)。
+
+### 17. GD 侧分工:设计师拥有场景,工程师拥有脚本
+
+`godot_project/` 内部按文件类型严格分工——**工程师 / AI 默认只能改 `.gd`,不能改设计师的场景与资源**:
+
+| 文件类型 | 拥有者 | 工程师能改? |
+|---|---|---|
+| `*.tscn`(场景结构 + 节点位置 + 物理 shape + 资源引用) | **设计师** | ❌ |
+| `*.tres`(共享资源,如 TileSet) | **设计师** | ❌ |
+| `*.png` + `*.import`(精灵 + Godot 自动导入元) | **设计师** | ❌ |
+| `*.gd`(行为脚本,如 `character.gd` / `MessageBridge.gd`) | **工程师** | ✅ 设计师可看可建议 |
+| `project.godot`(autoload / main_scene / config/name) | **工程师** | ✅ |
+| `proto/messages.gd` mirror | **工程师** | ✅(从仓库根 `/proto/messages.gd` 镜像同步,本身视为生成产物) |
+
+**为什么**:
+
+- 设计师在 Godot Editor 里**可视化拖控件**,精度远超工程师 / AI 从代码 / 截图反推坐标(`cute_pet` 分支首个 demo 验证过——AI 用屏幕截图反推 viewport 边界与碰撞 shape 位置,常偏 30-50 像素 → 角色穿模 / 卡墙 / 出框)
+- 场景的"为什么这么摆"包含设计意图(美术留白、运动路径、视线引导、y_sort 排序期望),工程师看 `.tscn` 文本看不出来
+- 物理 shape 是设计意图的一部分(脚印高低决定"角色能否站在家具底座"、collision layer 决定"哪些层互撞"、`y_sort_enabled` 决定"哪个 sprite 渲染顺序在前")
+
+**例外(紧急 hotfix)**:工程师**仅在**以下两种情况能改 `.tscn`:
+
+1. 文件结构 / 加载报错(scene 加载失败、merge 冲突、SubResource 顺序破坏)
+2. 上线阻塞(线上崩溃,设计师不在场)
+
+且 commit msg 必须注明:`DESIGN-HOTFIX: <原因>, design-owner: @xxx, pending review`。后续设计师 review 决定 keep 或 revert。`/cute-pixel-review` skill(planned)在 PR review 时检查"非 hotfix 的 .tscn / .tres / .png 改动"必须有设计师 sign-off,否则拒。
+
+**碰撞 / 视觉问题的修法纪律**(对应今天 cute_pet 分支踩的坑):
+
+- 角色穿模 / 出框 / 卡墙 / 渲染层级错 → **不是改 .tscn 加 WorldBoundary / 调 z_index / 移 position**,而是写进 `godot_project/TODO.md` 给设计师跟进
+- 工程师只在底座层提供 hook(例如 character.gd 暴露 `set_position()` / `set_z_index()` 方法供设计师 / RN 调),不替设计师定值
+
