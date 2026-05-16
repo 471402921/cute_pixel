@@ -8,7 +8,7 @@ status: Accepted
 
 ## Context
 
-cute_pixel 是像素风跨平台移动应用通用底座,目标 Android + iOS 双平台,首个内置 demo 为 cute_pet。
+cute_pixel 是像素风跨平台移动应用通用底座,目标 Android + iOS 双平台。
 
 底座的形态约束:**主体是常规 app 体验(列表 / 表单 / 设置 / 地图等),嵌入像素化场景做差异化情绪价值**。不是全屏游戏(那应当直接用游戏引擎,不需要本底座)。
 

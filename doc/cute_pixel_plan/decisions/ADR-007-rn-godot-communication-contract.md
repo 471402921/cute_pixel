@@ -11,7 +11,7 @@ RN 与 Godot 是两个独立 runtime,通信方式是底座最高抽象层的 inv
 
 B1 已验证 react-native-godot 1.0.1 的双向通信能跑(详见 [_B1_REPORT.md](../_B1_REPORT.md)),但仅触及"能调通方法"这一最浅层。本 ADR 在 B2 阶段补三层 invariant:wire 协议形态、状态权属、协议位置。
 
-明确**不在本 ADR 范围**的事项见末尾"Deferred"——defer 不是放弃,是"等第一个 demo 模块(cute_pet)暴露真实需求后再决定,避免预言式过度工程"。
+明确**不在本 ADR 范围**的事项见末尾"Deferred"——defer 不是放弃,是"等第一个 demo 模块暴露真实需求后再决定,避免预言式过度工程"。
 
 ## Decision
 

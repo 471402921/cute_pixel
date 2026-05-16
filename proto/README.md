@@ -32,4 +32,4 @@ RN ↔ Godot 双 runtime 通信契约的**单点真理**。
 
 ## 状态
 
-`messages.ts` / `messages.gd` 在第一个 demo 模块(cute_pet)接 PixelView 时实装。当前为占位,等待 ADR-007 §Deferred 中标注的几个事项(版本字段、错误处理、entity registry)在第一个 demo 暴露真实需求后再决定形态。
+`messages.ts` / `messages.gd` 在第一个 demo 模块接 PixelView 时实装。当前为占位,等待 ADR-007 §Deferred 中标注的几个事项(版本字段、错误处理、entity registry)在第一个 demo 暴露真实需求后再决定形态。

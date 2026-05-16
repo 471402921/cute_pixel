@@ -22,7 +22,7 @@
 - **主体**:常规 RN UI(列表 / 表单 / 设置 / 地图)
 - **嵌入像素场景**:通过 [react-native-godot](https://github.com/borndotcom/react-native-godot) 嵌入 Godot 4.5,做差异化情绪价值
 - **不是**全屏游戏(全屏游戏直接用 Godot,不需要本底座)
-- 首个内置 demo:`cute_pet`
+- 示例 demo:`cute_pet` 等参考实现(底座本身无业务绑定,fork 后随便起新模块)
 
 技术栈(B1 验证后版本钉死,详见 [ADR-004](doc/cute_pixel_plan/decisions/ADR-004-rn-bare-workflow.md)):
 
