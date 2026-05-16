@@ -4,14 +4,18 @@
 
 ## 仓库状态
 
-工程骨架已搭(`app/` / `godot_project/` / `proto/` / `scripts/` / Biome / yarn 4),iOS Sim + Android Emulator + Android 真机三平台都跑通过。架构文档里的 `app/services/godot/` `app/shared/` `app/features/` `app/_template/` `app/navigation/` `app/theme/` `app/i18n/` `e2e/` `proto/messages.ts` `proto/messages.gd` 等仍是 `planned`,等真正 Module-First Flat + ADR-007 契约落地。
+**B2 baseline 已就绪**(2026-05-16,commit 0fec3e5 起):工程骨架 + RN 侧 Phase A 基础设施 + proto/messages v0.1 + jest mock setup 全部到位。三平台跑通(iOS Sim + Android Emulator + Android 真机),clone-to-baseline 路径稳。
 
 进度:
 
 - ✅ Phase A:开发环境就绪(Node 22 LTS / Xcode 26 / Android SDK + AVD / Godot 4.5 / yarn 4 / Biome 等)
 - ✅ B1:react-native-godot example 三平台跑通(详见 [_B1_REPORT.md](doc/cute_pixel_plan/_B1_REPORT.md));ADR-001/002/004 + conventions + pixel-foundation 已据 B1 发现 2026-05-11 修订
-- ✅ B2(基础设施):upstream example 平移为 working baseline,清理死代码,重组成 `app/` + `godot_project/` + `scripts/`,Biome 替换 ESLint+Prettier
-- ⏳ B2(继续):Module-First Flat 真正落地(`app/services/godot/` `app/shared/` `app/features/` 等) + 6 个 `cute-pixel-*` skill + 第一个 demo 模块
+- ✅ B2(基础设施):upstream example 平移为 working baseline,清理死代码,重组成 `app/` + `godot_project/` + `proto/` + `scripts/`,Biome 替换 ESLint+Prettier
+- ✅ B2(契约层):ADR-007 RN↔GD 通信契约 v0.1 + proto/messages.ts/.gd 最小集(SCENE_LOAD/UNLOAD + SCENE_LOADED/BRIDGE_ERROR)
+- ✅ B2(RN Phase A):services/{error, logging, time, env, utils} + shared/{widgets/StateView, state, route-args} + app/navigation/ 全套落地(scaffolded,无 features 在用)
+- ⏳ B2(继续):services/godot/ 桥接实装(GodotProvider + PixelView + godotBridge + sceneCommands) + 6 个 `cute-pixel-*` skill 套件 + 第一个 demo 模块
+- 🔮 Phase B(等真痛):services/{network, storage, auth} + ky/MMKV/keychain 装包
+- 🔮 Phase C(等设计稿):app/theme/ + app/i18n/(i18next + zh/en sync 检查)
 
 正在迭代的内容在 [doc/cute_pixel_plan/](doc/cute_pixel_plan/)。等 B2 全套稳定后整体复制到 `doc/`,本目录归档为快照。
 

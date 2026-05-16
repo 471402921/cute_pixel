@@ -4,12 +4,16 @@
 
 ## 状态
 
-**B2 基础设施已就绪**(2026-05)。Upstream `react-native-godot/example` 已平移为 working baseline,清理死代码后重组成 `app/` + `godot_project/` + `scripts/`,Biome 替换 ESLint+Prettier。三平台都能跑(iOS Sim + Android Emulator + Android 真机)。
+**B2 baseline 已就绪**(2026-05-16)。Upstream `react-native-godot/example` 已平移为 working baseline,清理死代码后重组成 `app/` + `godot_project/` + `proto/` + `scripts/`,Biome 替换 ESLint+Prettier。RN 侧基础设施 Phase A(error / logging / time / env / StateView / navigation 等)scaffolded 完毕。三平台都能跑(iOS Sim + Android Emulator + Android 真机)。
 
 - ✅ Phase A:开发环境搭建(Node 22 LTS / Xcode 26 / Android SDK / Godot 4.5 / yarn 4 / Biome)
 - ✅ B1:react-native-godot example 三平台跑通,双向 signal 可用 — 详见 [_B1_REPORT.md](doc/cute_pixel_plan/_B1_REPORT.md)
-- ✅ B2(基础设施):baseline 平移 + 死代码清理 + `app/`/`godot_project/`/`scripts/` 重组 + Biome
-- ⏳ B2(继续):Module-First Flat 真正落地(`app/services/godot/` 等) + 6 个 `cute-pixel-*` skill + 第一个 demo 模块
+- ✅ B2(基础设施):baseline 平移 + 死代码清理 + 重组 + Biome
+- ✅ B2(契约层):ADR-007 + `proto/messages.ts/.gd` v0.1(SCENE_LOAD/UNLOAD + SCENE_LOADED/BRIDGE_ERROR)
+- ✅ B2(RN Phase A):`services/{error,logging,time,env,utils}` + `shared/{widgets/StateView,state,route-args}` + `app/navigation/`(`scaffolded`,等第一个 feature 接入)
+- ⏳ B2(继续):`services/godot/` 桥接实装 + 6 个 `cute-pixel-*` skill + 第一个 demo 模块
+- 🔮 Phase B(等需求):`services/{network,storage,auth}` + ky / MMKV / keychain 装包
+- 🔮 Phase C(等设计稿):`app/theme/` + `app/i18n/`
 
 ## 使用
 

@@ -43,23 +43,27 @@ cute_pixel/
 │   ├── App.tsx                       # 根组件                                [in-use]
 │   ├── types/                        # 第三方包的本地 .d.ts 兜底             [scaffolded]
 │   │   └── borndotcom__react-native-godot.d.ts  # @borndotcom/react-native-godot 1.0.1 不带类型,本地补最小 surface;命名 = scope__pkg.d.ts;包出官方类型后删
-│   ├── navigation/                   # 导航配置(React Navigation)         [planned]
+│   ├── navigation/                   # 导航配置(React Navigation)         [scaffolded]
+│   │   ├── RootNavigator.tsx         # 根 Stack 装配
+│   │   ├── navigationRef.ts          # 跨 tree navigation ref(services 层用)
+│   │   ├── types.ts                  # RootStackParamList
+│   │   └── index.ts
 │   ├── theme/                        # 主题                                  [planned]
 │   ├── i18n/                         # 国际化资源(zh / en JSON)           [planned]
-│   ├── services/                     # 基础设施(业务无关)                 [planned]
-│   │   ├── error/                    # Failure 类型
-│   │   ├── network/                  # ky + 拦截器
-│   │   ├── storage/                  # MMKV 封装
-│   │   ├── auth/                     # AuthService + token 生命周期
-│   │   ├── env/                      # Env 抽象
-│   │   ├── logging/                  # Logger 门面
-│   │   ├── time/                     # GameClock
-│   │   ├── godot/                    # RN ↔ Godot 桥接(详见 pixel-foundation.md)
-│   │   └── utils/                    # 纯函数工具
-│   ├── shared/                       # 跨模块共享                            [planned]
-│   │   ├── state/                    # 跨模块 store(useUserStore 等)
-│   │   ├── widgets/                  # 跨模块组件(StateView 等)
-│   │   └── route-args/               # 路由参数类型(跨模块契约)
+│   ├── services/                     # 基础设施(业务无关)
+│   │   ├── error/                    # Failure / ViewState                   [scaffolded]
+│   │   ├── network/                  # ky + 拦截器                           [planned]
+│   │   ├── storage/                  # MMKV 封装                             [planned]
+│   │   ├── auth/                     # AuthService + token 生命周期          [planned]
+│   │   ├── env/                      # validateEnv                           [scaffolded]
+│   │   ├── logging/                  # Logger 门面                           [scaffolded]
+│   │   ├── time/                     # GameClock + FakeClock                 [scaffolded]
+│   │   ├── godot/                    # RN ↔ Godot 桥接(详见 pixel-foundation.md) [planned]
+│   │   └── utils/                    # 纯函数工具                            [scaffolded(占位)]
+│   ├── shared/                       # 跨模块共享
+│   │   ├── state/                    # 跨模块 store(useUserStore 等)      [scaffolded(占位)]
+│   │   ├── widgets/                  # 跨模块组件(StateView 等)           [scaffolded]
+│   │   └── route-args/               # 路由参数类型(跨模块契约)            [scaffolded(占位)]
 │   ├── features/                     # 业务模块(Module-First Flat)       [planned]
 │   └── _template/                    # 模块模板(给 module-gen skill 用)  [planned]
 ├── godot_project/                    # Godot 工程(详见 pixel-foundation.md) [planned]
