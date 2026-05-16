@@ -2,6 +2,11 @@ extends CharacterBody2D
 
 @export var speed: float = 100.0
 
+# 活动区相对 viewport 的额外内缩(避开墙 + 家具区 → 角色只在地板活动)
+# 用 ratio 而不是绝对像素,跟 stretch mode "viewport+expand" 拉伸后的实际 viewport 自适应。
+# 顶部默认 30%(墙 + 家具区);左右下默认 0(贴 viewport 边)。
+@export var play_area_ratio_inset: Vector4 = Vector4(0.0, 0.30, 0.0, 0.15)  # left, top, right, bottom
+
 @onready var sprite = $AnimatedSprite2D
 
 # 外部控制(future WebSocket 来的 direction)
@@ -31,6 +36,33 @@ func _physics_process(delta: float) -> void:
 			velocity = Vector2.ZERO
 		_update_animation(velocity)
 	move_and_slide()
+	_clamp_to_viewport()
+
+# 临时防御:wall.tres 还没配 physics_layer 时,防止 autonomous walk 出 viewport。
+# 运行时读 viewport / camera,不 hardcode。设计师补 wall collision 后这段为冗余。
+# 撞边 → 立即 re_pick_action(idle 或反方向),避免贴边抖动。
+func _clamp_to_viewport() -> void:
+	if external_control_enabled:
+		return
+	var vp := get_viewport()
+	if vp == null:
+		return
+	var cam := vp.get_camera_2d()
+	if cam == null:
+		return
+	var view_size: Vector2 = vp.get_visible_rect().size / cam.zoom
+	var view_min: Vector2 = cam.global_position - view_size * 0.5
+	var view_max: Vector2 = cam.global_position + view_size * 0.5
+	var sprite_margin := 30.0
+	var before := global_position
+	var min_x: float = view_min.x + sprite_margin + view_size.x * play_area_ratio_inset.x
+	var min_y: float = view_min.y + sprite_margin + view_size.y * play_area_ratio_inset.y
+	var max_x: float = view_max.x - sprite_margin - view_size.x * play_area_ratio_inset.z
+	var max_y: float = view_max.y - sprite_margin - view_size.y * play_area_ratio_inset.w
+	global_position.x = clamp(global_position.x, min_x, max_x)
+	global_position.y = clamp(global_position.y, min_y, max_y)
+	if before != global_position:
+		_pick_new_action()
 
 # RN 侧通过 MessageBridge dispatch 调用(future WebSocket)
 func set_external_control(enabled: bool) -> void:
