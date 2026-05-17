@@ -15,9 +15,9 @@
  * 若未来要做"必须传"的 env,改成 `validateEnv` schema 入口即可。
  */
 
-const DEFAULT_REALTIME_URL = "ws://localhost:8080";
-// 40 x 'x' — 满足 §6 "≥ 32 字符,不可猜"要求的形态,但显然是 dev 占位。
-const DEFAULT_REALTIME_ROOM_ID = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+const DEFAULT_REALTIME_URL = "wss://console.ewow.cn:18789/relay";
+// console + relay 项目方分配的联调 room_id(2026-05-17,jet-dev,>= 32 字符)
+const DEFAULT_REALTIME_ROOM_ID = "cute-mvp-2026-05-17-jet-dev-aaaaaaaaaaaaaa";
 
 function readEnv(key: string, fallback: string): string {
   const value = process.env[key];
