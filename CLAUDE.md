@@ -14,6 +14,7 @@
 - ✅ B2(契约层):ADR-007 RN↔GD 通信契约 v0.1 + proto/messages.ts/.gd 最小集(SCENE_LOAD/UNLOAD + SCENE_LOADED/BRIDGE_ERROR)
 - ✅ B2(RN Phase A):services/{error, logging, time, env, utils} + shared/{widgets/StateView, state, route-args} + app/navigation/ 全套落地(scaffolded,无 features 在用)
 - ✅ B2(第一个 demo,cute_pet 分支):services/godot/ 全套实装(GodotProvider + PixelView + godotBridge + sceneCommands) + services/realtime/ stub(WebSocket placeholder) + features/room/ 第一个 Module-First Flat 实例 + Godot 端 MessageBridge.gd autoload + 像素风室内场景(Lissyluo66/godot-test 素材) + autonomous character 状态机。iOS Sim E2E 跑通(scene 渲染 + RN↔GD message bus 验证)。素材层 polish(wall.tres physics_layer 未配、4 家具 CollisionShape 空)在 [godot_project/TODO.md](godot_project/TODO.md),等设计师跟进
+- ✅ B2(console 联调,cute_pet 分支,2026-05-17):远程控制台 MVP 闭环。proto 加 CHARACTER_SET_EXTERNAL_CONTROL / SET_VELOCITY / CHARACTER_STATE(per ADR-007 §4 entity scoping);GD 端 MessageBridge 加 dispatch handler(group 查找 character,不 hardcode 路径)+ character.gd 5Hz CHARACTER_STATE 节流上报;RN 端 services/realtime/ 全套实装(WebSocketClient 真连 + 指数退避 1/2/4/8/16s × 5 → failed + realtimeBridge 双向路由 + envelope.ts);ConnectionIndicator 5 态(灰/黄/黄/绿/红)。联调地址 `wss://console.ewow.cn:18789/relay`(非 :443,腾讯边缘 anti-scan 拦截 SNI + :443 + 高频握手三者并存)。iOS Sim + Android 真机 E2E 双端验证通过。console + relay 是独立项目([471402921/consle](https://github.com/471402921/consle));需求/契约/对接细节见 [doc/console-spec/](doc/console-spec/)
 - ⏳ B2(继续):6 个 `cute-pixel-*` skill + 第二个 demo 模块(暴露 Portal "frame 跟随" 真实需求)
 - 🔮 Phase B(等真痛):services/{network, storage, auth} + ky/MMKV/keychain 装包
 - 🔮 Phase C(等设计稿):app/theme/ + app/i18n/(i18next + zh/en sync 检查)
@@ -173,6 +174,8 @@ core 服务:      ADR → TechPack → 手工实装 → review
 - **Godot env + native patches(§14,B1 后追加)** — `GODOT_EDITOR` 指 4.5.app + Podfile fmt patch + Android NDK 27/28 双装。
 - **Bridge 错误(§15,ADR-007 后追加)** — `godotBridge.send/subscribe` fail-soft;无效 message → silent drop + `BRIDGE_ERROR` Event;**底座不自动重启 engine**。
 - **Scene 生命周期(§16,ADR-007 后追加)** — 业务**不直接**发 `SCENE_LOAD/UNLOAD`,由 `<PixelView>` mount/unmount 隐式触发。
+- **GD 侧分工(§17)** — `.tscn` / `.tres` / `.png` / `.png.import` 是设计师 owned,工程师 / AI **默认只能改 `.gd`** + `project.godot` + `proto/messages.gd` mirror;紧急 hotfix 例外需 `DESIGN-HOTFIX:` commit 标记。AI **不要**替设计师反推 viewport 坐标 / collision shape / 角色位置(从截图推数值容易差几十像素),写进 `godot_project/TODO.md` 让设计师在 Godot Editor 里精确配。需要"临时防御"用运行时读取(`get_viewport().get_visible_rect()` + 比例 ratio)而不是 hardcode 像素。
+- **Entity scoping(ADR-007 §4,2026-05-17 后追加)** — 实体级 message 用 `<ENTITY>_<VERB>` 命名(`CHARACTER_SET_VELOCITY`、`NPC_TALK`),payload **不**嵌 `entity_type` 字段;场景级沿用 `SCENE_<VERB>`。避免实体数 × 动作数命名混乱。
 - **后端契约** — 响应 `{code, message, data, traceId}`,`code === 0` 为成功;HTTP 错误由 network 拦截器映射成 `Failure` 类型。后端接入前 `{module}Api.ts` 返 mock,接入时只改这一个文件。
 
 ## ADR 索引
@@ -185,13 +188,15 @@ core 服务:      ADR → TechPack → 手工实装 → review
 | [004](doc/cute_pixel_plan/decisions/ADR-004-rn-bare-workflow.md) | RN Bare + Expo modules + 工具链 | Accepted(2026-05-11 修订) |
 | [005](doc/cute_pixel_plan/decisions/ADR-005-godot-as-asset-editor.md) | Godot 编辑器作为 asset 编排工具 | Accepted |
 | [006](doc/cute_pixel_plan/decisions/ADR-006-spec-driven-with-strong-gates.md) | Spec-driven 流水线与强门禁 | Accepted |
-| [007](doc/cute_pixel_plan/decisions/ADR-007-rn-godot-communication-contract.md) | RN ↔ Godot 通信契约 v0.1(message bus + 状态权属 + proto/) | Accepted(2026-05-15) |
+| [007](doc/cute_pixel_plan/decisions/ADR-007-rn-godot-communication-contract.md) | RN ↔ Godot 通信契约 v0.1(message bus + 状态权属 + proto/) | Accepted(2026-05-15;2026-05-17 amended §4 entity scoping) |
 
 ADR 编号从 001 起,不 supersede 任何外部 ADR。
 
 ## 关键参考文档
 
 - [doc/cute_pixel_plan/_B1_REPORT.md](doc/cute_pixel_plan/_B1_REPORT.md) — B1 集成验证报告,所有 2026-05-11 修订的依据;改 ADR / conventions 前先看
+- [doc/console-spec/](doc/console-spec/) — 远程控制台需求 + 对外部 console 项目方([471402921/consle](https://github.com/471402921/consle))handoff 的 5 实装期决定;协议契约 / 联调状态 / room_id 等
+- [godot_project/TODO.md](godot_project/TODO.md) — 给设计师的素材层 polish 清单(wall.tres physics / 4 家具 collision 等),conventions §17 边界
 - [react-native-godot README](https://github.com/borndotcom/react-native-godot) — 上游集成参考(stable stack 来源)
 
 ## 文档写作纪律
