@@ -7,6 +7,10 @@ extends CharacterBody2D
 # 顶部默认 30%(墙 + 家具区);左右下默认 0(贴 viewport 边)。
 @export var play_area_ratio_inset: Vector4 = Vector4(0.0, 0.30, 0.0, 0.15)  # left, top, right, bottom
 
+const Messages = preload("res://proto/messages.gd")
+
+var _state_tick := 0
+
 @onready var sprite = $AnimatedSprite2D
 
 # 外部控制(future WebSocket 来的 direction)
@@ -20,6 +24,7 @@ var _action_direction := Vector2.ZERO
 var _current_action: String = "idle"  # "idle" | "walk"
 
 func _ready() -> void:
+	add_to_group("character")
 	_pick_new_action()
 
 func _physics_process(delta: float) -> void:
@@ -37,6 +42,19 @@ func _physics_process(delta: float) -> void:
 		_update_animation(velocity)
 	move_and_slide()
 	_clamp_to_viewport()
+	_state_tick += 1
+	if _state_tick >= 12:  # 60Hz / 12 = 5Hz
+		_state_tick = 0
+		_emit_state()
+
+func _emit_state() -> void:
+	var bridge := get_tree().root.get_node_or_null("MessageBridge")
+	if bridge == null:
+		return
+	var control_mode := "external" if external_control_enabled else "autonomous"
+	var anim_name := String(sprite.animation) if sprite != null else ""
+	var ev := Messages.character_state(global_position, anim_name, control_mode)
+	bridge.emit_event(ev)
 
 # 临时防御:wall.tres 还没配 physics_layer 时,防止 autonomous walk 出 viewport。
 # 运行时读 viewport / camera,不 hardcode。设计师补 wall collision 后这段为冗余。

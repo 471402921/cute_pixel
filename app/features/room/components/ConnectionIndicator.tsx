@@ -2,7 +2,12 @@
  * ConnectionIndicator — 浮在右上角的外部 console 连接状态小圆点 + 文字。
  *
  * 数据源:`useConnectionStatus`(services/realtime/),订阅 status 字段。
- * Demo 默认 status="disconnected" → 灰色"● 未连接"。
+ * 5 种状态(handoff §6):
+ *   disconnected → 灰 ● 未连接
+ *   connecting   → 黄 ● 连接中
+ *   reconnecting → 黄 ● 重连中
+ *   connected    → 绿 ● 已连接
+ *   failed       → 红 ● 已失败
  *
  * 视觉:
  * - 绝对定位右上,距 SafeArea 顶 + 16,距右 16
@@ -22,13 +27,17 @@ import {
 const COLORS: Record<ConnectionStatus, string> = {
   disconnected: "#9aa0a6",
   connecting: "#f7b500",
+  reconnecting: "#f7b500",
   connected: "#34a853",
+  failed: "#ea4335",
 };
 
 const LABELS: Record<ConnectionStatus, string> = {
   disconnected: "未连接",
   connecting: "连接中",
+  reconnecting: "重连中",
   connected: "已连接",
+  failed: "已失败",
 };
 
 export const ConnectionIndicator = () => {

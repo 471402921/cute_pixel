@@ -72,7 +72,8 @@
       "Bash(sips -g pixelWidth -g pixelHeight /Users/jet.d/cute_pixel/godot_project/resources/character.png)",
       "Bash(GODOT_EDITOR=/Applications/Godot-4.5.app/Contents/MacOS/Godot ./scripts/export_godot_GodotTest.sh ios)",
       "Bash(awk '/^\\\\[node name=\"TileMapLayer\"/,/^\\\\[node /{print}' /Users/jet.d/cute_pixel/godot_project/interior_scene/interior_scene.tscn)",
-      "Bash(xargs ls -la)"
+      "Bash(xargs ls -la)",
+      "Bash(curl -sL https://raw.githubusercontent.com/471402921/consle/main/handoff/cute_pixel.md -o /tmp/console_handoff_cute_pixel.md)"
     ],
     "additionalDirectories": [
       "/Users/jet.d/Library/Developer/CoreSimulator/Devices/0A9E497F-4D60-4AA0-9436-87AAC055E0E3/data/Containers/Bundle/Application/4181FEE6-A462-4F31-A476-1158B7403211/GodotTest.app"

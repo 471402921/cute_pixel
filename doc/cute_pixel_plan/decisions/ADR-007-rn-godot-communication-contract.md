@@ -3,6 +3,7 @@ id: ADR-007
 title: RN ↔ Godot 通信契约 v0.1
 date: 2026-05-15
 status: Accepted
+amended: 2026-05-17
 ---
 
 ## Context
@@ -77,6 +78,37 @@ cute_pixel/
 - TS 与 GDScript 文件并列存放,改协议必然双侧同改
 
 **修改纪律**:任何 PR 改 `proto/messages.ts` 必须同时改 `proto/messages.gd`。`/cute-pixel-review` skill 在 review 时检查双侧字段一致性(planned)。
+
+### 4. Entity scoping for entity-level messages(2026-05-17 增补)
+
+随着 console 接入(详见 [doc/console-spec/](../../console-spec/))引入实体级 message(CHARACTER_SET_VELOCITY 等),命名规则细化:
+
+**规则**:
+
+- 实体级 message **type 串用 `<ENTITY>_<VERB>` 形式**(`CHARACTER_SET_VELOCITY`、`NPC_TALK`、`ITEM_PICKUP`)
+- payload **不嵌 `entity_type` / `target_type` 字段** — 不同实体走不同 type
+- 单实体多动作时复用 ENTITY 前缀(`CHARACTER_SET_VELOCITY` / `CHARACTER_SET_EXTERNAL_CONTROL` / `CHARACTER_STATE`),避免在 verb 位置加实体修饰
+- 场景级 message 沿用 `SCENE_<VERB>`(`SCENE_LOAD` / `SCENE_UNLOAD` / `SCENE_LOADED`)
+
+**为什么**:
+
+- GD 端 `match msg.type` dispatch 按实体一段段排列,易读
+- TS 端 zod schema 枚举时,同实体的 Commands 自然成簇
+- console / debug 工具按实体 filter messages 时,type 字符串 prefix 即过滤器
+- 避免"实体数 × 动作数"指数增长导致命名混乱(`MOVE_CHARACTER` vs `CHARACTER_MOVE`)
+
+**例子**:
+
+```
+✅ CHARACTER_SET_VELOCITY       payload: { x, y }
+✅ NPC_TALK                     payload: { lines, voice }
+✅ ITEM_PICKUP                  payload: { item_id }
+
+❌ SET_CHARACTER_VELOCITY       payload: { x, y }                      # 动词在前,实体一致性差
+❌ ENTITY_ACTION                payload: { entity_type, action, ... }  # 实体类型嵌 payload,GD match 多一层 if
+```
+
+未来加 NPC / 物品 / 武器等实体时,沿用此规则。
 
 ## Alternatives Considered
 

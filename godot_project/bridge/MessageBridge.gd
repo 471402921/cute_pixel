@@ -28,6 +28,10 @@ func dispatch(json_string: String) -> void:
 			_handle_scene_load(payload)
 		Messages.CMD_SCENE_UNLOAD:
 			_handle_scene_unload(payload)
+		Messages.CMD_CHARACTER_SET_EXTERNAL_CONTROL:
+			_handle_character_set_external_control(payload)
+		Messages.CMD_CHARACTER_SET_VELOCITY:
+			_handle_character_set_velocity(payload)
 		_:
 			_emit_error(Messages.ERR_UNKNOWN_TYPE, "Unknown command: %s" % cmd_type, cmd_type)
 
@@ -47,6 +51,34 @@ func _handle_scene_load(payload) -> void:
 func _handle_scene_unload(payload) -> void:
 	# 本期 demo 不支持 runtime unload(单 main_scene 模式),仅 silent ack
 	pass
+
+func _handle_character_set_external_control(payload) -> void:
+	if typeof(payload) != TYPE_DICTIONARY or not payload.has("enabled"):
+		_emit_error(Messages.ERR_INVALID_MESSAGE, "CHARACTER_SET_EXTERNAL_CONTROL payload missing 'enabled'", Messages.CMD_CHARACTER_SET_EXTERNAL_CONTROL)
+		return
+	var ch := _find_character()
+	if ch == null:
+		_emit_error(Messages.ERR_HANDLER_ERROR, "Character node not found (group 'character')", Messages.CMD_CHARACTER_SET_EXTERNAL_CONTROL)
+		return
+	ch.set_external_control(bool(payload["enabled"]))
+
+func _handle_character_set_velocity(payload) -> void:
+	if typeof(payload) != TYPE_DICTIONARY or not payload.has("x") or not payload.has("y"):
+		_emit_error(Messages.ERR_INVALID_MESSAGE, "CHARACTER_SET_VELOCITY payload missing 'x'/'y'", Messages.CMD_CHARACTER_SET_VELOCITY)
+		return
+	var ch := _find_character()
+	if ch == null:
+		_emit_error(Messages.ERR_HANDLER_ERROR, "Character node not found (group 'character')", Messages.CMD_CHARACTER_SET_VELOCITY)
+		return
+	ch.set_external_velocity(Vector2(float(payload["x"]), float(payload["y"])))
+
+func _find_character() -> Node:
+	return get_tree().get_first_node_in_group("character")
+
+# 业务 .gd 通过这个上报 event(走 RN ↔ GD 桥);bridge 内部 SCENE_LOADED /
+# BRIDGE_ERROR 沿用私有 _emit_event。
+func emit_event(event: Dictionary) -> void:
+	_emit_event(event)
 
 func _emit_event(event: Dictionary) -> void:
 	event_emitted.emit(JSON.stringify(event))
