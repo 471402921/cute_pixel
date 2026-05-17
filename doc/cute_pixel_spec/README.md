@@ -1,4 +1,4 @@
-# cute_pixel_plan
+# cute_pixel_spec
 
 像素风 React Native + Godot 通用底座的文档草稿区。这里的内容稳定后整体复制到新仓 `doc/`,本目录归档。
 

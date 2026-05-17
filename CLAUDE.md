@@ -9,7 +9,7 @@
 进度:
 
 - ✅ Phase A:开发环境就绪(Node 22 LTS / Xcode 26 / Android SDK + AVD / Godot 4.5 / yarn 4 / Biome 等)
-- ✅ B1:react-native-godot example 三平台跑通(详见 [_B1_REPORT.md](doc/cute_pixel_plan/_B1_REPORT.md));ADR-001/002/004 + conventions + pixel-foundation 已据 B1 发现 2026-05-11 修订
+- ✅ B1:react-native-godot example 三平台跑通(详见 [_B1_REPORT.md](doc/cute_pixel_spec/_B1_REPORT.md));ADR-001/002/004 + conventions + pixel-foundation 已据 B1 发现 2026-05-11 修订
 - ✅ B2(基础设施):upstream example 平移为 working baseline,清理死代码,重组成 `app/` + `godot_project/` + `proto/` + `scripts/`,Biome 替换 ESLint+Prettier
 - ✅ B2(契约层):ADR-007 RN↔GD 通信契约 v0.1 + proto/messages.ts/.gd 最小集(SCENE_LOAD/UNLOAD + SCENE_LOADED/BRIDGE_ERROR)
 - ✅ B2(RN Phase A):services/{error, logging, time, env, utils} + shared/{widgets/StateView, state, route-args} + app/navigation/ 全套落地(scaffolded,无 features 在用)
@@ -19,7 +19,7 @@
 - 🔮 Phase B(等真痛):services/{network, storage, auth} + ky/MMKV/keychain 装包
 - 🔮 Phase C(等设计稿):app/theme/ + app/i18n/(i18next + zh/en sync 检查)
 
-正在迭代的内容在 [doc/cute_pixel_plan/](doc/cute_pixel_plan/)。等 B2 全套稳定后整体复制到 `doc/`,本目录归档为快照。
+正在迭代的内容在 [doc/cute_pixel_spec/](doc/cute_pixel_spec/)。等 B2 全套稳定后整体复制到 `doc/`,本目录归档为快照。
 
 ## 项目定位
 
@@ -30,7 +30,7 @@
 - **不是**全屏游戏(全屏游戏直接用 Godot,不需要本底座)
 - 示例 demo:`cute_pet` 等参考实现(底座本身无业务绑定,fork 后随便起新模块)
 
-技术栈(B1 验证后版本钉死,详见 [ADR-004](doc/cute_pixel_plan/decisions/ADR-004-rn-bare-workflow.md)):
+技术栈(B1 验证后版本钉死,详见 [ADR-004](doc/cute_pixel_spec/decisions/ADR-004-rn-bare-workflow.md)):
 
 - React Native 0.81 Bare + **Expo modules autolinking**(commit android/ios,不走 Expo CLI / Expo Go)
 - React 19.1 / TypeScript 5.3.3 strict / Hermes
@@ -49,7 +49,7 @@
 3. **单向依赖** — `features/* → services/* + shared/* → 外部包`。`services/` 和 `shared/` 不能依赖 `features/`。
 4. **命名一致** — `{Module}Page.tsx`、`{module}Store.ts`、`{module}Models.ts`、`{module}Api.ts`、`{Module}RouteArgs`。看文件名就知道职责,不要发明新结构。
 
-完整理由见 [doc/cute_pixel_plan/architecture.md](doc/cute_pixel_plan/architecture.md)。
+完整理由见 [doc/cute_pixel_spec/architecture.md](doc/cute_pixel_spec/architecture.md)。
 
 ## Module-First Flat 布局
 
@@ -79,7 +79,7 @@ features/{module}/
 
 ## 像素引擎边界(B1 后定型 + ADR-007 通信契约)
 
-Godot 由 `services/godot/` **单点封装**,业务模块**不**能直接 `import 'react-native-godot'`。RN ↔ Godot 通信契约定义在 [proto/](proto/) 仓库根目录(详见 [ADR-007](doc/cute_pixel_plan/decisions/ADR-007-rn-godot-communication-contract.md))。
+Godot 由 `services/godot/` **单点封装**,业务模块**不**能直接 `import 'react-native-godot'`。RN ↔ Godot 通信契约定义在 [proto/](proto/) 仓库根目录(详见 [ADR-007](doc/cute_pixel_spec/decisions/ADR-007-rn-godot-communication-contract.md))。
 
 ### Engine 生命周期 = App 生命周期(单实例常驻)
 
@@ -88,17 +88,17 @@ Godot 由 `services/godot/` **单点封装**,业务模块**不**能直接 `impor
 - App 进后台:`RTNGodot.pause()`
 - App 回前台:`RTNGodot.resume()`
 - **业务模块不能 create / destroy engine**,只能通过 `<PixelView>` mount/unmount 间接触发 scene swap
-- 原因:borndotcom 1.0.1 的 `destroyInstance` 有 Hermes GC × `GodotHostObject` 析构竞态,实测 SIGSEGV(详见 [_B1_REPORT.md §6](doc/cute_pixel_plan/_B1_REPORT.md))
+- 原因:borndotcom 1.0.1 的 `destroyInstance` 有 Hermes GC × `GodotHostObject` 析构竞态,实测 SIGSEGV(详见 [_B1_REPORT.md §6](doc/cute_pixel_spec/_B1_REPORT.md))
 
 ### PixelView Portal 模式
 
-> **Status:** 具体机制 `planned`,B2 实装时验证(view 跟随 frame 移动的性能/视觉抖动/双平台差异未实测;详见 [ADR-002 §PixelView Portal 模式](doc/cute_pixel_plan/decisions/ADR-002-godot-as-pixel-engine-via-react-native-godot.md#pixelview-portal-模式))。
+> **Status:** 具体机制 `planned`,B2 实装时验证(view 跟随 frame 移动的性能/视觉抖动/双平台差异未实测;详见 [ADR-002 §PixelView Portal 模式](doc/cute_pixel_spec/decisions/ADR-002-godot-as-pixel-engine-via-react-native-godot.md#pixelview-portal-模式))。
 
 业务模块**不直接**挂 `RTNGodotView`(真 view 只在 `GodotProvider` 里挂一份)。模块用 `<PixelView scene="..." />`,这是个 portal placeholder:
 
 - `<PixelView>` 用 `onLayout` 测自己的 frame → 告诉 GodotProvider"我要在这块区域显示某 scene"
 - GodotProvider 把 RTNGodotView 移动到该 frame + 自动发 `SCENE_LOAD` Command(`<PixelView>` unmount 时自动 `SCENE_UNLOAD`)
-- 业务模块**不直接**发 scene-level Command,详见 [conventions §16](doc/cute_pixel_plan/conventions.md#16-scene-生命周期by-pixelview)
+- 业务模块**不直接**发 scene-level Command,详见 [conventions §16](doc/cute_pixel_spec/conventions.md#16-scene-生命周期by-pixelview)
 
 模块的 mental model:**"我需要某 scene 显示在某区域"**,不是"我要一个 Godot view"。
 
@@ -126,8 +126,8 @@ GD → RN 反向:`godotBridge.subscribe(handler)` 收 Event,handler 调 store ac
 ### 硬性约束(违反 = 跑不起来 / 跑乱了)
 
 - **Godot 编辑器钉死 4.5.x**:LibGodot runtime 在 `try_open_pack()` 硬 abort 高于自己版本的 .pck;`GODOT_EDITOR` env 必须显式指向 4.5.app
-- **所有 RN→Godot API 调用必须在 worklet 里**:`runOnGodotThread(() => { "worklet"; godotBridge.* })`,详见 [conventions §13](doc/cute_pixel_plan/conventions.md#13-worklet-契约)
-- **iOS Podfile 必须带 fmt base.h patch**:RN 0.81 + Xcode 26.4 stack 的 `consteval` 编译错误,RN ≥ 0.84 后可删,详见 [conventions §14](doc/cute_pixel_plan/conventions.md#14-godot-env--native-build-patches)
+- **所有 RN→Godot API 调用必须在 worklet 里**:`runOnGodotThread(() => { "worklet"; godotBridge.* })`,详见 [conventions §13](doc/cute_pixel_spec/conventions.md#13-worklet-契约)
+- **iOS Podfile 必须带 fmt base.h patch**:RN 0.81 + Xcode 26.4 stack 的 `consteval` 编译错误,RN ≥ 0.84 后可删,详见 [conventions §14](doc/cute_pixel_spec/conventions.md#14-godot-env--native-build-patches)
 - **业务不直接拼 message**:走 `services/godot/{domain}Commands.ts` helper 调用;改 message 形态必双侧同改 `proto/messages.ts` + `proto/messages.gd`
 
 ## Status 标记——写 import 前必须核对
@@ -161,7 +161,7 @@ core 服务:      ADR → TechPack → 手工实装 → review
 
 ## 高影响约定速查
 
-完整内容见 [doc/cute_pixel_plan/conventions.md](doc/cute_pixel_plan/conventions.md)。容易忽略的关键点:
+完整内容见 [doc/cute_pixel_spec/conventions.md](doc/cute_pixel_spec/conventions.md)。容易忽略的关键点:
 
 - **错误处理(§1)** — `services/network/` 拦截器把 HTTP 异常和 zod parse 失败统一映射成 `Failure`(discriminated union);store 转成 `ViewState<T>`;Page 通过 `<StateView>` 渲染。**业务代码不直接 `try/catch` HTTP 异常**。
 - **i18n(§4)** — `useTranslation('petModule')` 按模块 namespace。硬编码字符串是 Biome `error`。`scripts/check-i18n-sync.ts` 在 CI 检查 zh / en key 同步。
@@ -175,6 +175,8 @@ core 服务:      ADR → TechPack → 手工实装 → review
 - **Bridge 错误(§15,ADR-007 后追加)** — `godotBridge.send/subscribe` fail-soft;无效 message → silent drop + `BRIDGE_ERROR` Event;**底座不自动重启 engine**。
 - **Scene 生命周期(§16,ADR-007 后追加)** — 业务**不直接**发 `SCENE_LOAD/UNLOAD`,由 `<PixelView>` mount/unmount 隐式触发。
 - **GD 侧分工(§17)** — `.tscn` / `.tres` / `.png` / `.png.import` 是设计师 owned,工程师 / AI **默认只能改 `.gd`** + `project.godot` + `proto/messages.gd` mirror;紧急 hotfix 例外需 `DESIGN-HOTFIX:` commit 标记。AI **不要**替设计师反推 viewport 坐标 / collision shape / 角色位置(从截图推数值容易差几十像素),写进 `godot_project/TODO.md` 让设计师在 Godot Editor 里精确配。需要"临时防御"用运行时读取(`get_viewport().get_visible_rect()` + 比例 ratio)而不是 hardcode 像素。
+- **协作 SOP(§18)** — 双方 (设计师 / 工程师) 接触面 = `@export` / `@onready` / `signal`;改这些要互相 sync(详见 §18.2)。GD 端 .gd 分机制层(框架,慎改)/ 业务层(可迭代)。破坏性接触面变更先写 `godot_project/TODO.md` 让对方 ack。
+- **GD 侧规范(§19-23)** — GD 端模块结构(对标 RN Module-First Flat)/ autoload 慎用 / 跨实体通信走 group + signal(不 hardcode 路径)/ `@export` 必有显式类型+默认值+`## ` 注释 / print 带模块 tag 不在 `_physics_process` 里裸 print。
 - **Entity scoping(ADR-007 §4,2026-05-17 后追加)** — 实体级 message 用 `<ENTITY>_<VERB>` 命名(`CHARACTER_SET_VELOCITY`、`NPC_TALK`),payload **不**嵌 `entity_type` 字段;场景级沿用 `SCENE_<VERB>`。避免实体数 × 动作数命名混乱。
 - **后端契约** — 响应 `{code, message, data, traceId}`,`code === 0` 为成功;HTTP 错误由 network 拦截器映射成 `Failure` 类型。后端接入前 `{module}Api.ts` 返 mock,接入时只改这一个文件。
 
@@ -182,26 +184,26 @@ core 服务:      ADR → TechPack → 手工实装 → review
 
 | ADR | 主题 | Status |
 |---|---|---|
-| [001](doc/cute_pixel_plan/decisions/ADR-001-react-native-as-app-framework.md) | RN 作为应用框架 | Accepted(2026-05-11 修订) |
-| [002](doc/cute_pixel_plan/decisions/ADR-002-godot-as-pixel-engine-via-react-native-godot.md) | Godot 通过 react-native-godot 嵌入 + 生命周期 + Portal | Accepted(2026-05-11 修订) |
-| [003](doc/cute_pixel_plan/decisions/ADR-003-state-management-zustand.md) | 状态管理选 Zustand | Accepted |
-| [004](doc/cute_pixel_plan/decisions/ADR-004-rn-bare-workflow.md) | RN Bare + Expo modules + 工具链 | Accepted(2026-05-11 修订) |
-| [005](doc/cute_pixel_plan/decisions/ADR-005-godot-as-asset-editor.md) | Godot 编辑器作为 asset 编排工具 | Accepted |
-| [006](doc/cute_pixel_plan/decisions/ADR-006-spec-driven-with-strong-gates.md) | Spec-driven 流水线与强门禁 | Accepted |
-| [007](doc/cute_pixel_plan/decisions/ADR-007-rn-godot-communication-contract.md) | RN ↔ Godot 通信契约 v0.1(message bus + 状态权属 + proto/) | Accepted(2026-05-15;2026-05-17 amended §4 entity scoping) |
+| [001](doc/cute_pixel_spec/decisions/ADR-001-react-native-as-app-framework.md) | RN 作为应用框架 | Accepted(2026-05-11 修订) |
+| [002](doc/cute_pixel_spec/decisions/ADR-002-godot-as-pixel-engine-via-react-native-godot.md) | Godot 通过 react-native-godot 嵌入 + 生命周期 + Portal | Accepted(2026-05-11 修订) |
+| [003](doc/cute_pixel_spec/decisions/ADR-003-state-management-zustand.md) | 状态管理选 Zustand | Accepted |
+| [004](doc/cute_pixel_spec/decisions/ADR-004-rn-bare-workflow.md) | RN Bare + Expo modules + 工具链 | Accepted(2026-05-11 修订) |
+| [005](doc/cute_pixel_spec/decisions/ADR-005-godot-as-asset-editor.md) | Godot 编辑器作为 asset 编排工具 | Accepted |
+| [006](doc/cute_pixel_spec/decisions/ADR-006-spec-driven-with-strong-gates.md) | Spec-driven 流水线与强门禁 | Accepted |
+| [007](doc/cute_pixel_spec/decisions/ADR-007-rn-godot-communication-contract.md) | RN ↔ Godot 通信契约 v0.1(message bus + 状态权属 + proto/) | Accepted(2026-05-15;2026-05-17 amended §4 entity scoping) |
 
 ADR 编号从 001 起,不 supersede 任何外部 ADR。
 
 ## 关键参考文档
 
-- [doc/cute_pixel_plan/_B1_REPORT.md](doc/cute_pixel_plan/_B1_REPORT.md) — B1 集成验证报告,所有 2026-05-11 修订的依据;改 ADR / conventions 前先看
+- [doc/cute_pixel_spec/_B1_REPORT.md](doc/cute_pixel_spec/_B1_REPORT.md) — B1 集成验证报告,所有 2026-05-11 修订的依据;改 ADR / conventions 前先看
 - [doc/console-spec/](doc/console-spec/) — 远程控制台需求 + 对外部 console 项目方([471402921/consle](https://github.com/471402921/consle))handoff 的 5 实装期决定;协议契约 / 联调状态 / room_id 等
 - [godot_project/TODO.md](godot_project/TODO.md) — 给设计师的素材层 polish 清单(wall.tres physics / 4 家具 collision 等),conventions §17 边界
 - [react-native-godot README](https://github.com/borndotcom/react-native-godot) — 上游集成参考(stable stack 来源)
 
 ## 文档写作纪律
 
-编辑 [doc/cute_pixel_plan/](doc/cute_pixel_plan/) 下的文件时:
+编辑 [doc/cute_pixel_spec/](doc/cute_pixel_spec/) 下的文件时:
 
 - 只讲底座**是什么、怎么用、为什么这样设计**,不写历史叙事,不引用旧技术栈
 - 底座 doc 与业务 doc 严格分离——IoT 项圈、LBS 地图、传感器融合等**只属于具体 app**,不进底座

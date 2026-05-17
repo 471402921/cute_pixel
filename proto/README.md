@@ -17,7 +17,7 @@ RN ↔ Godot 双 runtime 通信契约的**单点真理**。
 
 ## 协议形态
 
-详见 [ADR-007](../doc/cute_pixel_plan/decisions/ADR-007-rn-godot-communication-contract.md)。要点:
+详见 [ADR-007](../doc/cute_pixel_spec/decisions/ADR-007-rn-godot-communication-contract.md)。要点:
 
 - 通道收敛到一对方法:`godotBridge.send(cmd)` + `godotBridge.subscribe(handler)`
 - 所有 message 是带 `type` 字段的 discriminated union,zod parse 即 invariant 校验

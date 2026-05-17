@@ -1,6 +1,10 @@
 # Conventions
 
-14 条编码标准。§1-7 是 P0(底线),§8-12 是 P1(约定),§13-14 是 P0 集成补充(B1 验证后追加)。
+若干条编码标准 + 协作 SOP + 双侧(RN/GD)规范。
+
+**SPEC 原则**:**只定原则与契约,不卡死实现**——具体实现技术随业务可变,边界与协议不变。如发现某条把实现细节卡得过死(具体类名 / 文件命名 / 实装数值),倾向于放宽为"原则"+ 把细节留给 ADR / 真实装时决定。
+
+**分块**:§1-7 P0(底线),§8-12 P1(约定),§13-16 P0 集成补充(B1 / B2 后追加),§17-18 协作 SOP,§19-23 GD 侧规范。
 
 ---
 
@@ -39,11 +43,14 @@ HTTP 异常 / zod parse 失败  →  services/network 拦截器  →  Failure(se
 
 ### 3. 认证与 token 生命周期
 
-- `services/auth/AuthService` 单例:`login` / `logout` / `getToken` / `refreshToken` / `clear`
-- token 注入:`services/network/` 请求拦截器读 `AuthService.getToken()`
-- 401 自动:`AuthService.clear()` + 跳登录页(通过 navigation ref 跨 React Tree 调用)
-- refresh token:token 过期 30 秒前触发 silent refresh;并发请求共享 refresh promise(避免多次 refresh)
-- token 存储:`react-native-mmkv` 加密存储(encryption key 来源 `react-native-keychain`)
+**原则**:
+
+- auth 作为 service 提供(放 `services/auth/`),业务模块通过 service 接口访问,**不直接读 / 持有 token**
+- token 必须加密存储(后端 MMKV + 密钥来源 keychain)
+- 401 触发 token 清理 + 跳登录页(通过 navigation ref 跨 React Tree)
+- refresh 由 service 内部处理,并发请求共享同一 refresh promise,业务无感
+
+具体实装(单例形态 / refresh 提前时长 / API 名)在 auth service 真上线时单独 ADR 决定;Phase B planned。
 
 ### 4. i18n(zh / en 双语同步)
 
@@ -250,3 +257,151 @@ end
 - 业务模块只决定"我现在要不要显示像素世界",通过 mount/unmount `<PixelView>` 表达
 
 例外:scene 内部状态 reset(非 load/unload)由模块发自己的 domain Command(`PET_RESET` 等),不是 scene-level 的事。详见 [pixel-foundation §加载契约](pixel-foundation.md#加载契约scene-swap非-engine-restart)。
+
+---
+
+## 协作 SOP
+
+### 17. GD 侧分工:设计师拥有场景,工程师拥有脚本
+
+`godot_project/` 内部按文件类型严格分工——**工程师默认只能改 `.gd`,不能改设计师的场景与资源**:
+
+| 文件类型 | 拥有者 | 工程师能改? |
+|---|---|---|
+| `*.tscn`(场景结构 + 节点位置 + 物理 shape + 资源引用) | **设计师** | ❌ |
+| `*.tres`(共享资源,如 TileSet) | **设计师** | ❌ |
+| `*.png` + `*.import`(精灵 + Godot 自动导入元) | **设计师** | ❌ |
+| `*.gd`(行为脚本,如 `character.gd` / `MessageBridge.gd`) | **工程师** | ✅ 设计师可看可建议 |
+| `project.godot`(autoload / main_scene / config/name) | **工程师** | ✅ |
+| `proto/messages.gd` mirror | **工程师** | ✅(从仓库根 `/proto/messages.gd` 镜像同步,本身视为生成产物) |
+
+**为什么**:
+
+- 设计师在 Godot Editor 里**可视化拖控件**,精度远超工程师从代码 / 截图反推坐标(`cute_pet` 分支首个 demo 验证过——AI 用屏幕截图反推 viewport 边界与碰撞 shape 位置,常偏 30-50 像素 → 角色穿模 / 卡墙 / 出框)
+- 场景的"为什么这么摆"包含设计意图(美术留白、运动路径、视线引导、y_sort 排序期望),工程师看 `.tscn` 文本看不出来
+- 物理 shape 是设计意图的一部分(脚印高低决定"角色能否站在家具底座"、collision layer 决定"哪些层互撞"、`y_sort_enabled` 决定"哪个 sprite 渲染顺序在前")
+
+**例外(紧急 hotfix)**:工程师**仅在**以下两种情况能改 `.tscn`:
+
+1. 文件结构 / 加载报错(scene 加载失败、merge 冲突、SubResource 顺序破坏)
+2. 上线阻塞(线上崩溃,设计师不在场)
+
+且 commit msg 必须注明:`DESIGN-HOTFIX: <原因>, design-owner: @xxx, pending review`。后续设计师 review 决定 keep 或 revert。
+
+**碰撞 / 视觉问题的修法纪律**:
+
+- 角色穿模 / 出框 / 卡墙 / 渲染层级错 → **不是改 .tscn 加 WorldBoundary / 调 z_index / 移 position**,而是写进 `godot_project/TODO.md` 给设计师跟进
+- 工程师只在底座层提供 hook(例如 character.gd 暴露 `set_position()` / `set_z_index()` 方法供设计师 / RN 调),不替设计师定值
+
+### 18. 设计师 ↔ 工程师 协作
+
+跟 §17 配套——§17 划清"谁拥有什么文件",§18 规定"动这些文件时双方怎么交接"。
+
+#### 18.1 GD 端 .gd 内部分层(改 .gd 时的影响面意识)
+
+| 层 | 例子 | 改动影响面 |
+|---|---|---|
+| **机制层**(framework) | `MessageBridge.gd` autoload / engine lifecycle hook / `_physics_process` tick 框架 | 改动近似改 ADR,影响所有依赖它的业务 .gd,慎重 + sync 双方 |
+| **业务层**(gameplay) | `character.gd._pick_new_action` 自主行为 / interact 行为 / 升级条件 | 改动只影响特定模块,可迭代 |
+
+#### 18.2 接触面契约
+
+GD 端的几样东西是"设计师 .tscn 配置 ↔ 工程师 .gd 代码"的接触面,双方都要尊重:
+
+- **`@export` 变量** = 双方契约。改默认值 / 类型 / 重命名 → 必须事先 sync(设计师 Inspector 里调过的值会丢)
+- **`@onready var X = $Path`** = 工程师对 .tscn 节点结构的隐性依赖。设计师改节点结构 / 重命名 → 必须本地跑确认 `@onready` 不断
+- **`signal`** = 双方都可 emit / connect,新增 / 重命名要约定谁拍板
+- 每个 .gd 顶部建议固定注释列出"依赖 .tscn 的节点路径 / signal 名 / 给设计师 Inspector 用的 @export 变量",改这些时双方 sync
+
+#### 18.3 破坏性改动谁拍板
+
+- 工程师跨界改 .tscn 仅限 §17 列出的 hotfix 例外(加载报错 / 上线阻塞),commit msg 必须 `DESIGN-HOTFIX:` 标记
+- 工程师改 .gd 涉及破坏性接触面变更(@export 重命名 / signal 重命名 / @onready 节点路径假设变),提议方先写到 `godot_project/TODO.md` 让对方 ack + 验收,不偷偷改
+- 设计师改 .tscn 涉及节点重组 / 节点名改 / signal 加减,事先 sync 工程师跑一遍 `.gd` 看 `@onready` 不断
+
+#### 18.4 git 协作(避免 .tscn / .gd 同时改的合并冲突)
+
+- `.tscn` 是 Godot Editor 序列化的文本,行级 diff 可 merge,但跨段重排 / sub_resource 顺序变更 / id 改容易冲突
+- 工程师改 .gd 前 `git pull` 确认 .tscn 没在被设计师同时改;如果设计师正在场景重组,等设计师 commit 后再开始
+- 设计师重大场景重组(节点改 ID / 跨 scene 重构)前告诉工程师,避免代码引用断
+
+---
+
+## GD 侧规范
+
+> 跟 RN 侧 §1-12 类似的抽象级别。设计师 owns GD 全部,这一段是设计师约束清单(对标 RN 侧给工程师的约束)。
+
+### 19. GD 模块结构
+
+跟 RN 侧 Module-First Flat 呼应,GD 端按"角色 / 场景 / 共享资源"平铺组织:
+
+```
+godot_project/
+├── characters/{character}/    # 单个角色(scene + script + 资源同目录)
+│   ├── {character}.tscn       # 角色场景(节点结构 + 默认配置)
+│   ├── {character}.gd         # 角色脚本(autonomous / external / interact 行为)
+│   └── {character}.png + .import   # 精灵
+├── scenes/{scene}/            # 单个场景(室内 / 室外 / 战斗 等)
+│   ├── {scene}.tscn
+│   └── 场景专属资源
+├── furnitures/                # 家具 / 物品(scene + 资源)
+├── resources/                 # 共享 PNG / .tres(墙、地板、tileset 等)
+├── bridge/                    # MessageBridge 等机制层
+├── proto/                     # AUTO-MIRRORED schema(改协议先改根 /proto/)
+└── project.godot              # 工程配置(autoload / main_scene / config/name)
+```
+
+**约定**:
+
+- **不跨模块文件引用** — `characters/A/A.gd` 不直接 `preload("res://characters/B/B.tscn")`;跨实体通信走 `bridge/` 或 group + signal(详见 §21)
+- **共享资源放 `resources/`** — 跨多个 scene / character 用到的 PNG / TileSet / .tres
+- **新角色 / 新 scene 必须按本结构开目录**,不要散在 root
+
+### 20. Autoload 慎用
+
+`project.godot` 的 autoload 节点全局可达(`get_tree().root.get_node("X")` 或裸 `X.method()`),好用但是滥用 = GD 端的"全局变量":
+
+**约定**:
+
+- autoload 仅限**机制层**(`MessageBridge` 等基础设施),不放业务实体
+- 新增 autoload **必须先评估**:能用 `add_to_group` + `get_first_node_in_group` 解决吗?能用 signal connect 解决吗?都不行才加 autoload
+- autoload 命名用 PascalCase(`MessageBridge` / `GameClock`),跟节点习惯一致;**别用动词或形容词**(`InitLoader` / `GlobalState` 太宽)
+
+### 21. GD 端模块通信:group + signal,不裸引用
+
+跟 RN 侧"模块不互引"铁律呼应,GD 端跨实体 / 跨 scene 通信:
+
+| 场景 | 推荐方式 |
+|---|---|
+| Bridge dispatch 找特定实体 | `add_to_group(name)` + `get_tree().get_first_node_in_group(name)` — 不 hardcode 节点路径 |
+| 实体内部状态变化通知 | 定义 `signal`,connect 在 `_ready`;**不**直接调用其他节点方法 |
+| 跨 scene 持久状态 | 走 RN 侧 store(详见 ADR-007 状态权属),**不**在 GD 端搞全局 state |
+| 业务级实体协作 | 业务层 signal + RN 侧调度;**不**直接 entity-to-entity |
+
+**禁止**:
+
+- `get_node("/root/SceneName/Path/To/Other")` 之类绝对路径,场景重组立刻断
+- 单例 / autoload 直接修改其他实体内部状态 — 状态权属乱
+
+### 22. Inspector @export 命名 + 类型
+
+`@export` 变量是设计师 Inspector 调节 / 工程师代码读取的**接触面**(详见 §18.2):
+
+**约定**:
+
+- 命名用 snake_case(GDScript 习惯),不要 camelCase
+- **必有显式类型 + 默认值**(`@export var speed: float = 100.0`);别用裸 `@export var foo`
+- 类型选**强类型**(`float` / `int` / `String` / `Vector2` / `bool` / 自定义 `enum`),避免 `Variant`
+- 默认值给**合理工作值**(让设计师 Inspector 第一次打开就能跑,不要 0 / null / 空串触发崩溃)
+- 给设计师调的 @export 变量加 `## ` 注释行说明语义 + 单位(`## 移动速度(px/sec)`),Godot Editor 会显示
+- **不要**用 @export 暴露内部状态(`_action_timer` 之类),Inspector 调它会乱状态机
+
+### 23. GD 端 print / log 标准
+
+对标 RN 侧 §5 日志门面,GD 端约定:
+
+- print 必须带模块 tag:`print("[character] external control enabled")`,不要裸 `print("foo")`
+- error 级别用 `push_error()`(走 Godot 错误输出),warning 用 `push_warning()`
+- 永远**不**在 `_physics_process` / `_process` 这种高频回调里 `print`(60Hz 会刷屏);要诊断频繁事件用节流(如 `_state_tick % 60 == 0`)
+- 业务事件需要回流给 RN 端的,走 `MessageBridge.emit_event()` 发 Event,**不**用 print 当通信手段
+- 长期 planned:跟 RN 侧 Logger 双侧对齐(GD 端封个 `framework/logging/Logger.gd` 提供 `info/warn/error` API),现阶段先靠纪律

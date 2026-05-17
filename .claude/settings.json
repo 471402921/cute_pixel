@@ -89,7 +89,11 @@
       "Bash(adb reverse *)",
       "Bash(GODOT_EDITOR=/Applications/Godot-4.5.app/Contents/MacOS/Godot ./scripts/export_godot_GodotTest.sh android)",
       "Bash(yarn android *)",
-      "Bash(tee /tmp/cute_pixel_yarn_android.log)"
+      "Bash(tee /tmp/cute_pixel_yarn_android.log)",
+      "Bash([ -f \"/Users/jet.d/cute_pixel/$f\" ])",
+      "Bash(perl -pi -e s/cute_pixel_plan/cute_pixel_spec/g /Users/jet.d/cute_pixel/__TRACKED_VAR__)",
+      "Bash(grep -c cute_pixel_spec /Users/jet.d/cute_pixel/__TRACKED_VAR__)",
+      "Bash(awk '/^### 17\\\\./,/^###|^---|^##/{print}')"
     ],
     "additionalDirectories": [
       "/Users/jet.d/Library/Developer/CoreSimulator/Devices/0A9E497F-4D60-4AA0-9436-87AAC055E0E3/data/Containers/Bundle/Application/4181FEE6-A462-4F31-A476-1158B7403211/GodotTest.app"
